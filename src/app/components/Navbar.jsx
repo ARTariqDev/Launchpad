@@ -12,7 +12,7 @@ export default function Navbar() {
   const navLinks = [
     { name: "Dashboard", href: "/dashboard", icon: faHome },
     { name: "Colleges", href: "/colleges", icon: faGraduationCap },
-    { name: "Extracurriculars", href: "/ecs", icon: faTrophy },
+    { name: "Extracurriculars", href: "/extracurriculars", icon: faTrophy },
     { name: "Scholarships", href: "/scholarships", icon: faBook },
     { name: "FAQ's/Guide", href: "/faq", icon: faQuestionCircle },
   ];

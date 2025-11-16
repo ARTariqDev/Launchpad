@@ -21,6 +21,8 @@ export class UserProfile {
       userId,
       major: profileData.major || '',
       majors: profileData.majors || [],
+      nationality: profileData.nationality || '',
+      efc: profileData.efc !== undefined ? profileData.efc : null,
       essays: profileData.essays || [],
       extracurriculars: profileData.extracurriculars || [],
       awards: profileData.awards || [],
@@ -44,6 +46,8 @@ export class UserProfile {
         academics: false
       },
       profileAnalysis: profileData.profileAnalysis || null,
+      savedColleges: profileData.savedColleges || [],
+      collegeInsights: profileData.collegeInsights || [],
       updatedAt: new Date()
     };
 

@@ -4,19 +4,19 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
 import Toast from "../components/Toast";
-import ScholarshipDetailsModal from "../components/ScholarshipDetailsModal";
+import ExtracurricularDetailsModal from "../components/ExtracurricularDetailsModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch, faCalendar, faInfoCircle, faBookmark } from "@fortawesome/free-solid-svg-icons";
 
-export default function ScholarshipsPage() {
+export default function ExtracurricularsPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
-  const [scholarships, setScholarships] = useState([]);
-  const [filteredScholarships, setFilteredScholarships] = useState([]);
+  const [extracurriculars, setExtracurriculars] = useState([]);
+  const [filteredExtracurriculars, setFilteredExtracurriculars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [toast, setToast] = useState(null);
-  const [selectedScholarship, setSelectedScholarship] = useState(null);
+  const [selectedActivity, setSelectedActivity] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
@@ -41,48 +41,48 @@ export default function ScholarshipsPage() {
 
   useEffect(() => {
     if (user) {
-      fetchScholarships();
+      fetchExtracurriculars();
     }
   }, [user]);
 
   useEffect(() => {
-    let filtered = [...scholarships];
+    let filtered = [...extracurriculars];
 
     if (searchTerm) {
-      filtered = filtered.filter(scholarship =>
-        scholarship.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        scholarship.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(activity =>
+        activity.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        activity.description?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    setFilteredScholarships(filtered);
-  }, [searchTerm, scholarships]);
+    setFilteredExtracurriculars(filtered);
+  }, [searchTerm, extracurriculars]);
 
-  const fetchScholarships = async () => {
+  const fetchExtracurriculars = async () => {
     try {
-      const response = await fetch("/api/scholarships");
+      const response = await fetch("/api/extracurriculars");
       const data = await response.json();
       
-      if (data.scholarships) {
-        setScholarships(data.scholarships);
-        setFilteredScholarships(data.scholarships);
+      if (data.extracurriculars) {
+        setExtracurriculars(data.extracurriculars);
+        setFilteredExtracurriculars(data.extracurriculars);
       }
     } catch (error) {
-      console.error("Error fetching scholarships:", error);
+      console.error("Error fetching extracurriculars:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return "No deadline";
+    if (!dateString) return "Date TBD";
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const handleSaveScholarship = (scholarshipName) => {
+  const handleSaveActivity = (activityName) => {
     setToast({
-      message: `${scholarshipName} saved to your bookmarks!`,
+      message: `${activityName} saved to your bookmarks!`,
       type: "success"
     });
   };
@@ -94,7 +94,7 @@ export default function ScholarshipsPage() {
         style={{ backgroundColor: "var(--primary-bg)" }}
       >
         <div className="animate-pulse" style={{ color: "var(--text-primary)" }}>
-          Loading scholarships...
+          Loading extracurriculars...
         </div>
       </div>
     );
@@ -117,10 +117,10 @@ export default function ScholarshipsPage() {
               fontFamily: "var(--font-display)",
             }}
           >
-            Scholarships
+            Extracurricular Activities
           </h1>
           <p style={{ color: "var(--text-secondary)", fontSize: "16px" }}>
-            Discover scholarship opportunities to fund your education
+            Explore opportunities to enhance your college applications
           </p>
         </div>
 
@@ -133,7 +133,7 @@ export default function ScholarshipsPage() {
             />
             <input
               type="text"
-              placeholder="Search scholarships by name or description..."
+              placeholder="Search activities by name or description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-4 py-3 rounded-lg border-2 bg-transparent focus:outline-none focus:border-white transition-colors"
@@ -145,26 +145,26 @@ export default function ScholarshipsPage() {
           </div>
 
           <p className="mt-4" style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
-            Showing {filteredScholarships.length} of {scholarships.length} scholarships
+            Showing {filteredExtracurriculars.length} of {extracurriculars.length} activities
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredScholarships.map((scholarship) => (
+          {filteredExtracurriculars.map((activity) => (
             <div
-              key={scholarship._id}
+              key={activity._id}
               className="border-2 rounded-lg overflow-hidden hover:border-white/40 transition-all duration-300 transform hover:-translate-y-1 flex flex-col"
               style={{
                 borderColor: "rgba(255, 255, 255, 0.2)",
                 backgroundColor: "rgba(0, 0, 0, 0.3)",
               }}
             >
-              {scholarship.thumbnail && (
+              {activity.thumbnail && (
                 <div className="w-full h-48 overflow-hidden bg-black/50">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img 
-                    src={scholarship.thumbnail} 
-                    alt={scholarship.name}
+                    src={activity.thumbnail} 
+                    alt={activity.name}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -175,10 +175,10 @@ export default function ScholarshipsPage() {
                   className="font-bold mb-3 text-xl"
                   style={{ color: "var(--text-primary)", fontFamily: "var(--font-display)" }}
                 >
-                  {scholarship.name}
+                  {activity.name}
                 </h3>
 
-                {scholarship.deadline && (
+                {activity.date && (
                   <div className="flex items-center gap-2 mb-3">
                     <FontAwesomeIcon
                       icon={faCalendar}
@@ -186,12 +186,12 @@ export default function ScholarshipsPage() {
                       className="w-4"
                     />
                     <span style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
-                      Deadline: {formatDate(scholarship.deadline)}
+                      {formatDate(activity.date)}
                     </span>
                   </div>
                 )}
 
-                {scholarship.description && (
+                {activity.description && (
                   <p
                     className="mb-4 flex-1"
                     style={{ 
@@ -203,13 +203,13 @@ export default function ScholarshipsPage() {
                       overflow: "hidden"
                     }}
                   >
-                    {scholarship.description}
+                    {activity.description}
                   </p>
                 )}
 
                 <div className="flex gap-2 mt-auto">
                   <button
-                    onClick={() => handleSaveScholarship(scholarship.name)}
+                    onClick={() => handleSaveActivity(activity.name)}
                     className="flex-1 px-4 py-2 rounded-lg border-2 hover:bg-white/10 transition-all duration-200 flex items-center justify-center gap-2"
                     style={{
                       borderColor: "rgba(255, 255, 255, 0.3)",
@@ -222,7 +222,7 @@ export default function ScholarshipsPage() {
 
                   <button
                     onClick={() => {
-                      setSelectedScholarship(scholarship);
+                      setSelectedActivity(activity);
                       setShowDetailsModal(true);
                     }}
                     className="flex-1 px-4 py-2 rounded-lg border-2 hover:bg-white/10 transition-all duration-200 flex items-center justify-center gap-2"
@@ -240,10 +240,10 @@ export default function ScholarshipsPage() {
           ))}
         </div>
 
-        {filteredScholarships.length === 0 && (
+        {filteredExtracurriculars.length === 0 && (
           <div className="text-center py-12">
             <p style={{ color: "var(--text-secondary)", fontSize: "18px" }}>
-              No scholarships found matching your criteria
+              No activities found matching your criteria
             </p>
           </div>
         )}
@@ -257,12 +257,12 @@ export default function ScholarshipsPage() {
         />
       )}
 
-      {showDetailsModal && selectedScholarship && (
-        <ScholarshipDetailsModal
-          scholarship={selectedScholarship}
+      {showDetailsModal && selectedActivity && (
+        <ExtracurricularDetailsModal
+          activity={selectedActivity}
           onClose={() => {
             setShowDetailsModal(false);
-            setSelectedScholarship(null);
+            setSelectedActivity(null);
           }}
         />
       )}

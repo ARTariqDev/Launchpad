@@ -32,6 +32,8 @@ export default function Dashboard() {
   // Profile data
   const [profile, setProfile] = useState({
     majors: [],
+    nationality: '',
+    efc: null,
     essays: [],
     extracurriculars: [],
     awards: [],
@@ -179,6 +181,19 @@ export default function Dashboard() {
     const newMajors = currentMajors.filter((_, i) => i !== index);
     newMajors.forEach((major, i) => major.rank = i + 1);
     setProfile({ ...profile, majors: newMajors });
+  };
+
+  const updateEFC = (value) => {
+    if (value === '') {
+      setProfile({ ...profile, efc: null });
+    } else {
+      const numValue = parseInt(value);
+      setProfile({ ...profile, efc: isNaN(numValue) ? 0 : numValue });
+    }
+  };
+
+  const updateNationality = (value) => {
+    setProfile({ ...profile, nationality: value });
   };
 
   // Essay functions
@@ -401,7 +416,7 @@ export default function Dashboard() {
   };
 
   const cards = [
-    { id: 'majors', title: 'Intended Majors', icon: faGraduationCap, color: '#8b5cf6' },
+    { id: 'majors', title: 'Intended Majors and Finances', icon: faGraduationCap, color: '#8b5cf6' },
     { id: 'essays', title: 'Essays', icon: faFileAlt, color: '#ec4899' },
     { id: 'extracurriculars', title: 'Extracurriculars', icon: faTrophy, color: '#f59e0b' },
     { id: 'awards', title: 'Awards & Honors', icon: faAward, color: '#10b981' },
@@ -525,6 +540,8 @@ export default function Dashboard() {
                 updateMajor={updateMajor}
                 moveMajor={moveMajor}
                 removeMajor={removeMajor}
+                updateEFC={updateEFC}
+                updateNationality={updateNationality}
                 isComplete={profile.sectionCompletion?.majors}
                 toggleComplete={() => toggleSectionCompletion('majors')}
               />
@@ -692,9 +709,9 @@ function DashboardCard({ card, onClick, index, count, isComplete }) {
 }
 
 // Majors Section
-function MajorsSection({ profile, addMajor, updateMajor, moveMajor, removeMajor, isComplete, toggleComplete }) {
+function MajorsSection({ profile, addMajor, updateMajor, moveMajor, removeMajor, updateEFC, updateNationality, isComplete, toggleComplete }) {
   return (
-    <SectionWrapper icon={faGraduationCap} title="Intended Majors" subtitle="Rank your major choices in order of preference">
+    <SectionWrapper icon={faGraduationCap} title="Intended Majors and Finances" subtitle="Rank your major choices and enter your expected family contribution">
       {/* Mark as Complete Checkbox */}
       <div className="mb-4 pb-4 border-b-2" style={{ borderColor: "rgba(255, 255, 255, 0.1)" }}>
         <label className="flex items-center gap-3 cursor-pointer group">
@@ -711,6 +728,68 @@ function MajorsSection({ profile, addMajor, updateMajor, moveMajor, removeMajor,
             Mark section as complete
           </span>
         </label>
+      </div>
+
+      {/* Nationality */}
+      <div className="mb-6">
+        <label className="block mb-2 text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+          Nationality / Country of Citizenship
+        </label>
+        <select
+          value={profile.nationality || ''}
+          onChange={(e) => updateNationality(e.target.value)}
+          className="w-full px-4 py-3 rounded-lg border-2 bg-transparent focus:outline-none focus:border-white transition-colors"
+          style={{
+            borderColor: "rgba(255, 255, 255, 0.2)",
+            color: profile.nationality ? "var(--text-primary)" : "var(--text-secondary)",
+            fontFamily: "var(--font-body)",
+          }}
+        >
+          <option value="" style={{ backgroundColor: "var(--primary-bg)" }}>Select your nationality</option>
+          <option value="United States" style={{ backgroundColor: "var(--primary-bg)" }}>United States</option>
+          <option value="United Kingdom" style={{ backgroundColor: "var(--primary-bg)" }}>United Kingdom</option>
+          <option value="Canada" style={{ backgroundColor: "var(--primary-bg)" }}>Canada</option>
+          <option value="Australia" style={{ backgroundColor: "var(--primary-bg)" }}>Australia</option>
+          <option value="India" style={{ backgroundColor: "var(--primary-bg)" }}>India</option>
+          <option value="China" style={{ backgroundColor: "var(--primary-bg)" }}>China</option>
+          <option value="Pakistan" style={{ backgroundColor: "var(--primary-bg)" }}>Pakistan</option>
+          <option value="Bangladesh" style={{ backgroundColor: "var(--primary-bg)" }}>Bangladesh</option>
+          <option value="Nigeria" style={{ backgroundColor: "var(--primary-bg)" }}>Nigeria</option>
+          <option value="South Africa" style={{ backgroundColor: "var(--primary-bg)" }}>South Africa</option>
+          <option value="Other" style={{ backgroundColor: "var(--primary-bg)" }}>Other</option>
+        </select>
+        <p className="mt-2 text-xs" style={{ color: "var(--text-secondary)" }}>
+          This helps determine if you&apos;re a domestic or international applicant
+        </p>
+      </div>
+
+      {/* Expected Family Contribution */}
+      <div className="mb-6">
+        <label className="block mb-2 text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+          Expected Family Contribution (EFC)
+        </label>
+        <div className="relative">
+          <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-lg" style={{ color: "var(--text-secondary)" }}>
+            $
+          </span>
+          <input
+            type="number"
+            value={profile.efc || ''}
+            onChange={(e) => updateEFC(e.target.value)}
+            placeholder="0 means full financial aid required"
+            min="0"
+            step="1000"
+            className="w-full pl-8 pr-4 py-3 rounded-lg border-2 bg-transparent focus:outline-none focus:border-white transition-colors"
+            style={{
+              borderColor: "rgba(255, 255, 255, 0.2)",
+              color: "var(--text-primary)",
+              fontFamily: "var(--font-body)",
+            }}
+          />
+        </div>
+        <p className="mt-2 text-xs" style={{ color: "var(--text-secondary)" }}>
+          Enter 0 if you require full financial aid. This helps match you with colleges based on your financial needs.
+        </p>
       </div>
 
       <div className="space-y-3">
