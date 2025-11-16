@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEdit, faTrash, faSearch, faCalendar, faUniversity, faTrophy, faRunning } from "@fortawesome/free-solid-svg-icons";
 import EditModal from "./EditModal";
@@ -8,42 +8,133 @@ import EditModal from "./EditModal";
 export default function ManageTab({ type }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingItem, setEditingItem] = useState(null);
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      name: "Harvard University",
-      deadline: "2025-12-01",
-      description: "Ivy League university in Massachusetts",
-      thumbnail: true,
-    },
-    {
-      id: 2,
-      name: "Stanford University",
-      deadline: "2025-11-30",
-      description: "Private research university in California",
-      thumbnail: false,
-    },
-    {
-      id: 3,
-      name: "MIT",
-      deadline: "2025-11-25",
-      description: "Massachusetts Institute of Technology",
-      thumbnail: true,
-    },
-  ]);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      let endpoint = "/api/universities";
+      if (type === "extracurriculars") {
+        endpoint = "/api/extracurriculars";
+      } else if (type === "scholarships") {
+        endpoint = "/api/scholarships";
+      }
+
+      const response = await fetch(endpoint);
+      const data = await response.json();
+
+      if (response.ok) {
+        const itemsKey = type === "universities" ? "universities" : type === "extracurriculars" ? "extracurriculars" : "scholarships";
+        const fetchedItems = data[itemsKey] || [];
+        
+        // Transform data to match component structure
+        const transformedItems = fetchedItems.map(item => ({
+          id: item._id,
+          name: item.name,
+          deadline: item.deadline || item.date,
+          deadlines: item.deadlines || [],
+          description: item.description,
+          location: item.location || { city: '', state: '', country: '' },
+          thumbnail: item.thumbnail || null,
+        }));
+        
+        setItems(transformedItems);
+      } else {
+        setError("Failed to load data");
+      }
+    } catch (error) {
+      console.error("Fetch error:", error);
+      setError("An error occurred while loading data");
+    } finally {
+      setLoading(false);
+    }
+  }, [type]);
+
+  // Fetch data on mount and when type changes
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleEdit = (id) => {
     const item = items.find((item) => item.id === id);
     setEditingItem(item);
   };
 
-  const handleSave = (updatedItem) => {
-    setItems(items.map((item) => (item.id === updatedItem.id ? updatedItem : item)));
-    console.log("Saved:", updatedItem);
+  const handleSave = async (updatedItem) => {
+    try {
+      let endpoint = `/api/universities/${updatedItem.id}`;
+      if (type === "extracurriculars") {
+        endpoint = `/api/extracurriculars/${updatedItem.id}`;
+      } else if (type === "scholarships") {
+        endpoint = `/api/scholarships/${updatedItem.id}`;
+      }
+
+      const formData = new FormData();
+      formData.append("name", updatedItem.name);
+      
+      if (type === "universities") {
+        formData.append("deadlines", JSON.stringify(updatedItem.deadlines || []));
+        formData.append("location", JSON.stringify(updatedItem.location || { city: '', state: '', country: '' }));
+      } else if (type === "extracurriculars") {
+        formData.append("date", updatedItem.deadline);
+        formData.append("description", updatedItem.description);
+      } else {
+        formData.append("deadline", updatedItem.deadline);
+        formData.append("description", updatedItem.description);
+      }
+      
+      if (updatedItem.thumbnail && updatedItem.thumbnail instanceof File) {
+        formData.append("thumbnail", updatedItem.thumbnail);
+      }
+
+      const response = await fetch(endpoint, {
+        method: "PUT",
+        body: formData,
+      });
+
+      if (response.ok) {
+        // Refresh data
+        await fetchData();
+      } else {
+        alert("Failed to update item");
+      }
+    } catch (error) {
+      console.error("Update error:", error);
+      alert("An error occurred while updating");
+    }
   };
 
-  const handleDelete = (id) => {
-    setItems(items.filter((item) => item.id !== id));
+  const handleDelete = async (id) => {
+    if (!confirm("Are you sure you want to delete this item?")) {
+      return;
+    }
+
+    try {
+      let endpoint = `/api/universities/${id}`;
+      if (type === "extracurriculars") {
+        endpoint = `/api/extracurriculars/${id}`;
+      } else if (type === "scholarships") {
+        endpoint = `/api/scholarships/${id}`;
+      }
+
+      const response = await fetch(endpoint, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        // Refresh data
+        await fetchData();
+      } else {
+        alert("Failed to delete item");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert("An error occurred while deleting");
+    }
   };
 
   const filteredItems = items.filter((item) =>
@@ -107,18 +198,36 @@ export default function ManageTab({ type }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {filteredItems.length === 0 ? (
-          <div
-            className="col-span-full text-center py-16 rounded-lg border-2 border-dashed"
-            style={{ borderColor: "var(--card-border)", backgroundColor: "var(--card-bg)" }}
-          >
-            <FontAwesomeIcon icon={faSearch} style={{ color: "var(--text-subtle)", fontSize: "32px", marginBottom: "12px" }} />
-            <p style={{ color: "var(--text-subtle)", fontFamily: "var(--font-body)", fontSize: "16px" }}>
-              No {getTypeLabel().toLowerCase()} found
-            </p>
+      {loading ? (
+        <div className="text-center py-16">
+          <div className="animate-pulse" style={{ color: "var(--text-primary)" }}>
+            Loading...
           </div>
-        ) : (
+        </div>
+      ) : error ? (
+        <div
+          className="px-4 py-3 rounded-md border-2"
+          style={{
+            backgroundColor: "rgba(239, 68, 68, 0.1)",
+            borderColor: "rgba(239, 68, 68, 0.5)",
+            color: "#ef4444",
+          }}
+        >
+          {error}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {filteredItems.length === 0 ? (
+            <div
+              className="col-span-full text-center py-16 rounded-lg border-2 border-dashed"
+              style={{ borderColor: "var(--card-border)", backgroundColor: "var(--card-bg)" }}
+            >
+              <FontAwesomeIcon icon={faSearch} style={{ color: "var(--text-subtle)", fontSize: "32px", marginBottom: "12px" }} />
+              <p style={{ color: "var(--text-subtle)", fontFamily: "var(--font-body)", fontSize: "16px" }}>
+                No {getTypeLabel().toLowerCase()} found
+              </p>
+            </div>
+          ) : (
           filteredItems.map((item, index) => (
             <div
               key={item.id}
@@ -133,8 +242,17 @@ export default function ManageTab({ type }) {
               <div className="relative">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-start gap-3 flex-1">
-                    <div className="w-12 h-12 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: item.thumbnail ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.05)" }}>
-                      <FontAwesomeIcon icon={getTypeIcon()} style={{ color: "var(--text-secondary)", fontSize: "18px" }} />
+                    <div className="w-12 h-12 rounded-lg flex items-center justify-center shrink-0 overflow-hidden" style={{ backgroundColor: item.thumbnail ? "transparent" : "rgba(255, 255, 255, 0.05)" }}>
+                      {item.thumbnail ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img 
+                          src={item.thumbnail} 
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <FontAwesomeIcon icon={getTypeIcon()} style={{ color: "var(--text-secondary)", fontSize: "18px" }} />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -148,11 +266,6 @@ export default function ManageTab({ type }) {
                         >
                           {item.name}
                         </h3>
-                        {item.thumbnail && (
-                          <span className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: "rgba(255, 255, 255, 0.1)", color: "var(--text-secondary)", fontFamily: "var(--font-display)" }}>
-                            IMG
-                          </span>
-                        )}
                       </div>
                       <p
                         className="line-clamp-2"
@@ -163,24 +276,41 @@ export default function ManageTab({ type }) {
                           lineHeight: "1.5",
                         }}
                       >
-                        {item.description}
+                        {type === "universities" && item.location 
+                          ? `${item.location.city}, ${item.location.state}, ${item.location.country}`
+                          : item.description}
                       </p>
                     </div>
                   </div>
                 </div>
                 
                 <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: "rgba(255, 255, 255, 0.1)" }}>
-                  <div className="flex items-center gap-2">
-                    <FontAwesomeIcon icon={faCalendar} style={{ color: "var(--text-subtle)", fontSize: "12px" }} />
-                    <p
-                      style={{
-                        color: "var(--text-subtle)",
-                        fontSize: "13px",
-                        fontFamily: "var(--font-body)",
-                      }}
-                    >
-                      {new Date(item.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {type === "universities" && item.deadlines && item.deadlines.length > 0 ? (
+                      item.deadlines.map((dl, idx) => (
+                        <div key={idx} className="flex items-center gap-1 px-2 py-1 rounded" style={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}>
+                          <span style={{ color: "var(--text-secondary)", fontSize: "11px", fontFamily: "var(--font-display)", fontWeight: "bold" }}>
+                            {dl.type}
+                          </span>
+                          <span style={{ color: "var(--text-subtle)", fontSize: "11px" }}>
+                            {new Date(dl.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon={faCalendar} style={{ color: "var(--text-subtle)", fontSize: "12px" }} />
+                        <p
+                          style={{
+                            color: "var(--text-subtle)",
+                            fontSize: "13px",
+                            fontFamily: "var(--font-body)",
+                          }}
+                        >
+                          {item.deadline ? new Date(item.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No deadline'}
+                        </p>
+                      </>
+                    )}
                   </div>
                   
                   <div className="flex gap-2">
@@ -206,7 +336,8 @@ export default function ManageTab({ type }) {
             </div>
           ))
         )}
-      </div>
+        </div>
+      )}
 
       {editingItem && (
         <EditModal

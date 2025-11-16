@@ -12,9 +12,37 @@ export default function EditModal({ item, type, onClose, onSave }) {
     description: item?.description || "",
     thumbnail: null,
   });
+  const [deadlines, setDeadlines] = useState(
+    item?.deadlines && item.deadlines.length > 0 
+      ? item.deadlines 
+      : [{ type: "REA", date: "" }]
+  );
+  const [location, setLocation] = useState(
+    item?.location || { city: "", state: "", country: "" }
+  );
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleLocationChange = (field, value) => {
+    setLocation({ ...location, [field]: value });
+  };
+
+  const handleDeadlineChange = (index, field, value) => {
+    const newDeadlines = [...deadlines];
+    newDeadlines[index][field] = value;
+    setDeadlines(newDeadlines);
+  };
+
+  const addDeadline = () => {
+    setDeadlines([...deadlines, { type: "EA", date: "" }]);
+  };
+
+  const removeDeadline = (index) => {
+    if (deadlines.length > 1) {
+      setDeadlines(deadlines.filter((_, i) => i !== index));
+    }
   };
 
   const handleFileChange = (e) => {
@@ -25,7 +53,20 @@ export default function EditModal({ item, type, onClose, onSave }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave({ ...item, ...formData });
+    const updatedItem = { 
+      ...item, 
+      ...formData 
+    };
+    
+    // For universities, include deadlines array and location
+    if (type === "universities") {
+      updatedItem.deadlines = deadlines.filter(d => d.date);
+      updatedItem.location = location;
+      // Remove description for universities
+      delete updatedItem.description;
+    }
+    
+    onSave(updatedItem);
     onClose();
   };
 
@@ -112,62 +153,219 @@ export default function EditModal({ item, type, onClose, onSave }) {
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="deadline"
-              className="block mb-2 sm:mb-3 font-bold"
-              style={{
-                color: "var(--text-primary)",
-                fontSize: "13px",
-                fontFamily: "var(--font-display)",
-              }}
-            >
-              {getDateLabel()} *
-            </label>
-            <input
-              type="date"
-              id="deadline"
-              name="deadline"
-              value={formData.deadline}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 sm:px-4 sm:py-3 rounded-md border-2 bg-transparent focus:outline-none focus:border-white transition-colors text-sm sm:text-base"
-              style={{
-                borderColor: "rgba(255, 255, 255, 0.2)",
-                color: "var(--text-primary)",
-                fontFamily: "var(--font-body)",
-              }}
-            />
-          </div>
+          {type !== "universities" && (
+            <div>
+              <label
+                htmlFor="deadline"
+                className="block mb-2 sm:mb-3 font-bold"
+                style={{
+                  color: "var(--text-primary)",
+                  fontSize: "13px",
+                  fontFamily: "var(--font-display)",
+                }}
+              >
+                {getDateLabel()} *
+              </label>
+              <input
+                type="date"
+                id="deadline"
+                name="deadline"
+                value={formData.deadline}
+                onChange={handleChange}
+                required
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 rounded-md border-2 bg-transparent focus:outline-none focus:border-white transition-colors text-sm sm:text-base"
+                style={{
+                  borderColor: "rgba(255, 255, 255, 0.2)",
+                  color: "var(--text-primary)",
+                  fontFamily: "var(--font-body)",
+                }}
+              />
+            </div>
+          )}
 
-          <div>
-            <label
-              htmlFor="description"
-              className="block mb-2 sm:mb-3 font-bold"
-              style={{
-                color: "var(--text-primary)",
-                fontSize: "13px",
-                fontFamily: "var(--font-display)",
-              }}
-            >
-              Description *
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              required
-              rows="3"
-              className="w-full px-3 py-2 sm:px-4 sm:py-3 rounded-md border-2 bg-transparent focus:outline-none focus:border-white transition-colors resize-y text-sm sm:text-base"
-              style={{
-                borderColor: "rgba(255, 255, 255, 0.2)",
-                color: "var(--text-primary)",
-                fontFamily: "var(--font-body)",
-                minHeight: "80px",
-              }}
-            />
-          </div>
+          {type === "universities" && (
+            <div>
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <label
+                  className="block font-bold"
+                  style={{
+                    color: "var(--text-primary)",
+                    fontSize: "13px",
+                    fontFamily: "var(--font-display)",
+                  }}
+                >
+                  Application Deadlines *
+                </label>
+                <button
+                  type="button"
+                  onClick={addDeadline}
+                  className="px-2 py-1 rounded-md border-2 hover:bg-white/10 transition-colors text-xs font-bold"
+                  style={{
+                    borderColor: "rgba(255, 255, 255, 0.2)",
+                    color: "var(--text-primary)",
+                    fontFamily: "var(--font-display)",
+                  }}
+                >
+                  + Add
+                </button>
+              </div>
+              <div className="space-y-2">
+                {deadlines.map((deadline, index) => (
+                  <div key={index} className="flex gap-2 items-start">
+                    <div className="flex-1">
+                      <select
+                        value={deadline.type}
+                        onChange={(e) => handleDeadlineChange(index, "type", e.target.value)}
+                        className="w-full px-3 py-2 rounded-md border-2 bg-transparent focus:outline-none focus:border-white transition-colors cursor-pointer text-sm"
+                        style={{
+                          borderColor: "rgba(255, 255, 255, 0.2)",
+                          color: "var(--text-primary)",
+                          fontFamily: "var(--font-body)",
+                        }}
+                      >
+                        <option value="REA" style={{ backgroundColor: "var(--primary-bg)" }}>REA</option>
+                        <option value="EA" style={{ backgroundColor: "var(--primary-bg)" }}>EA</option>
+                        <option value="ED1" style={{ backgroundColor: "var(--primary-bg)" }}>ED1</option>
+                        <option value="ED2" style={{ backgroundColor: "var(--primary-bg)" }}>ED2</option>
+                        <option value="RD" style={{ backgroundColor: "var(--primary-bg)" }}>RD</option>
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <input
+                        type="date"
+                        value={deadline.date}
+                        onChange={(e) => handleDeadlineChange(index, "date", e.target.value)}
+                        required
+                        className="w-full px-3 py-2 rounded-md border-2 bg-transparent focus:outline-none focus:border-white transition-colors text-sm"
+                        style={{
+                          borderColor: "rgba(255, 255, 255, 0.2)",
+                          color: "var(--text-primary)",
+                          fontFamily: "var(--font-body)",
+                        }}
+                      />
+                    </div>
+                    {deadlines.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeDeadline(index)}
+                        className="px-3 py-2 rounded-md border-2 hover:bg-white/10 transition-colors text-sm"
+                        style={{
+                          borderColor: "rgba(239, 68, 68, 0.5)",
+                          color: "#ef4444",
+                        }}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {type === "universities" ? (
+            <div>
+              <label
+                className="block mb-2 sm:mb-3 font-bold"
+                style={{
+                  color: "var(--text-primary)",
+                  fontSize: "13px",
+                  fontFamily: "var(--font-display)",
+                }}
+              >
+                Location *
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+                <div>
+                  <input
+                    type="text"
+                    value={location.city}
+                    onChange={(e) => handleLocationChange("city", e.target.value)}
+                    required
+                    placeholder="City"
+                    className="w-full px-3 py-2 rounded-md border-2 bg-transparent focus:outline-none focus:border-white transition-colors text-sm"
+                    style={{
+                      borderColor: "rgba(255, 255, 255, 0.2)",
+                      color: "var(--text-primary)",
+                      fontFamily: "var(--font-body)",
+                    }}
+                  />
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    value={location.state}
+                    onChange={(e) => handleLocationChange("state", e.target.value)}
+                    required
+                    placeholder="State/Province"
+                    className="w-full px-3 py-2 rounded-md border-2 bg-transparent focus:outline-none focus:border-white transition-colors text-sm"
+                    style={{
+                      borderColor: "rgba(255, 255, 255, 0.2)",
+                      color: "var(--text-primary)",
+                      fontFamily: "var(--font-body)",
+                    }}
+                  />
+                </div>
+                <div>
+                  <select
+                    value={location.country}
+                    onChange={(e) => handleLocationChange("country", e.target.value)}
+                    required
+                    className="w-full px-3 py-2 rounded-md border-2 bg-transparent focus:outline-none focus:border-white transition-colors cursor-pointer text-sm"
+                    style={{
+                      borderColor: "rgba(255, 255, 255, 0.2)",
+                      color: "var(--text-primary)",
+                      fontFamily: "var(--font-body)",
+                    }}
+                  >
+                    <option value="" style={{ backgroundColor: "var(--primary-bg)" }}>Select Country</option>
+                    <option value="USA" style={{ backgroundColor: "var(--primary-bg)" }}>United States</option>
+                    <option value="Canada" style={{ backgroundColor: "var(--primary-bg)" }}>Canada</option>
+                    <option value="UK" style={{ backgroundColor: "var(--primary-bg)" }}>United Kingdom</option>
+                    <option value="Australia" style={{ backgroundColor: "var(--primary-bg)" }}>Australia</option>
+                    <option value="Germany" style={{ backgroundColor: "var(--primary-bg)" }}>Germany</option>
+                    <option value="France" style={{ backgroundColor: "var(--primary-bg)" }}>France</option>
+                    <option value="Netherlands" style={{ backgroundColor: "var(--primary-bg)" }}>Netherlands</option>
+                    <option value="Switzerland" style={{ backgroundColor: "var(--primary-bg)" }}>Switzerland</option>
+                    <option value="Singapore" style={{ backgroundColor: "var(--primary-bg)" }}>Singapore</option>
+                    <option value="Japan" style={{ backgroundColor: "var(--primary-bg)" }}>Japan</option>
+                    <option value="South Korea" style={{ backgroundColor: "var(--primary-bg)" }}>South Korea</option>
+                    <option value="China" style={{ backgroundColor: "var(--primary-bg)" }}>China</option>
+                    <option value="Other" style={{ backgroundColor: "var(--primary-bg)" }}>Other</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label
+                htmlFor="description"
+                className="block mb-2 sm:mb-3 font-bold"
+                style={{
+                  color: "var(--text-primary)",
+                  fontSize: "13px",
+                  fontFamily: "var(--font-display)",
+                }}
+              >
+                Description *
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                required
+                rows="3"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 rounded-md border-2 bg-transparent focus:outline-none focus:border-white transition-colors resize-y text-sm sm:text-base"
+                style={{
+                  borderColor: "rgba(255, 255, 255, 0.2)",
+                  color: "var(--text-primary)",
+                  fontFamily: "var(--font-body)",
+                  minHeight: "80px",
+                }}
+              />
+            </div>
+          )}
 
           <div>
             <label
