@@ -31,7 +31,6 @@ export default function ManageTab({ type }) {
         const itemsKey = type === "universities" ? "universities" : type === "extracurriculars" ? "extracurriculars" : "scholarships";
         const fetchedItems = data[itemsKey] || [];
         
-        // Transform data to match component structure
         const transformedItems = fetchedItems.map(item => ({
           id: item._id,
           name: item.name,
@@ -54,7 +53,6 @@ export default function ManageTab({ type }) {
     }
   }, [type]);
 
-  // Fetch data on mount and when type changes
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -97,7 +95,6 @@ export default function ManageTab({ type }) {
       });
 
       if (response.ok) {
-        // Refresh data
         await fetchData();
       } else {
         alert("Failed to update item");
@@ -126,7 +123,6 @@ export default function ManageTab({ type }) {
       });
 
       if (response.ok) {
-        // Refresh data
         await fetchData();
       } else {
         alert("Failed to delete item");
@@ -244,7 +240,6 @@ export default function ManageTab({ type }) {
                   <div className="flex items-start gap-3 flex-1">
                     <div className="w-12 h-12 rounded-lg flex items-center justify-center shrink-0 overflow-hidden" style={{ backgroundColor: item.thumbnail ? "transparent" : "rgba(255, 255, 255, 0.05)" }}>
                       {item.thumbnail ? (
-                        // eslint-disable-next-line @next/next/no-img-element
                         <img 
                           src={item.thumbnail} 
                           alt={item.name}

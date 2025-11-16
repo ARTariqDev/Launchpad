@@ -29,7 +29,6 @@ export default function Dashboard() {
   const [saveMessage, setSaveMessage] = useState("");
   const [activeCard, setActiveCard] = useState(null);
   
-  // Profile data
   const [profile, setProfile] = useState({
     majors: [],
     nationality: '',
@@ -82,7 +81,6 @@ export default function Dashboard() {
       const response = await fetch("/api/profile");
       const data = await response.json();
       if (data.profile) {
-        // Merge with defaults to ensure all arrays exist and migrate old essays
         const migratedEssays = (data.profile.essays || []).map(essay => ({
           ...essay,
           maxWordCount: essay.maxWordCount || (essay.essayType === 'Personal Statement' ? 650 : 300),
@@ -90,7 +88,6 @@ export default function Dashboard() {
           sections: essay.sections || []
         }));
         
-        // Migrate old subjects to include gradeType and curriculumType fields
         const globalCurriculumType = data.profile.academics?.type || '';
         const migratedSubjects = (data.profile.academics?.subjects || []).map(subject => ({
           ...subject,
@@ -100,6 +97,8 @@ export default function Dashboard() {
         
         setProfile({
           majors: data.profile.majors || [],
+          nationality: data.profile.nationality || '',
+          efc: data.profile.efc !== undefined ? data.profile.efc : null,
           essays: migratedEssays,
           extracurriculars: data.profile.extracurriculars || [],
           awards: data.profile.awards || [],
@@ -149,7 +148,6 @@ export default function Dashboard() {
     }
   };
 
-  // Major functions
   const addMajor = () => {
     const currentMajors = Array.isArray(profile.majors) ? profile.majors : [];
     setProfile({
@@ -196,7 +194,6 @@ export default function Dashboard() {
     setProfile({ ...profile, nationality: value });
   };
 
-  // Essay functions
   const addEssay = () => {
     const currentEssays = Array.isArray(profile.essays) ? profile.essays : [];
     setProfile({
@@ -228,7 +225,6 @@ export default function Dashboard() {
     });
   };
 
-  // Essay section functions (for UK-style essays)
   const addEssaySection = (essayIndex) => {
     const currentEssays = Array.isArray(profile.essays) ? profile.essays : [];
     const newEssays = [...currentEssays];
@@ -253,7 +249,6 @@ export default function Dashboard() {
     setProfile({ ...profile, essays: newEssays });
   };
 
-  // Extracurricular functions
   const addExtracurricular = () => {
     const currentECs = Array.isArray(profile.extracurriculars) ? profile.extracurriculars : [];
     if (currentECs.length >= 10) {
@@ -281,7 +276,6 @@ export default function Dashboard() {
     });
   };
 
-  // Award functions
   const addAward = () => {
     const currentAwards = Array.isArray(profile.awards) ? profile.awards : [];
     if (currentAwards.length >= 5) {
@@ -309,7 +303,6 @@ export default function Dashboard() {
     });
   };
 
-  // Test Score functions
   const addTestScore = () => {
     const currentTestScores = Array.isArray(profile.testScores) ? profile.testScores : [];
     setProfile({
@@ -338,7 +331,6 @@ export default function Dashboard() {
     });
   };
 
-  // Academic functions
   const addAcademicSubject = (subject) => {
     const currentSubjects = Array.isArray(profile.academics?.subjects) ? profile.academics.subjects : [];
     setProfile({
@@ -637,7 +629,6 @@ export default function Dashboard() {
   );
 }
 
-// Dashboard Card Component
 function DashboardCard({ card, onClick, index, count, isComplete }) {
   const animationClass = `animate-fade-in-delay-${Math.min(index, 3)}`;
   
@@ -708,7 +699,6 @@ function DashboardCard({ card, onClick, index, count, isComplete }) {
   );
 }
 
-// Majors Section
 function MajorsSection({ profile, addMajor, updateMajor, moveMajor, removeMajor, updateEFC, updateNationality, isComplete, toggleComplete }) {
   return (
     <SectionWrapper icon={faGraduationCap} title="Intended Majors and Finances" subtitle="Rank your major choices and enter your expected family contribution">
@@ -788,7 +778,7 @@ function MajorsSection({ profile, addMajor, updateMajor, moveMajor, removeMajor,
           />
         </div>
         <p className="mt-2 text-xs" style={{ color: "var(--text-secondary)" }}>
-          Enter 0 if you require full financial aid. This helps match you with colleges based on your financial needs.
+          Leave this empty if you require full financial aid. This helps match you with colleges based on your financial needs.
         </p>
       </div>
 
@@ -872,7 +862,6 @@ function MajorsSection({ profile, addMajor, updateMajor, moveMajor, removeMajor,
   );
 }
 
-// Essays Section - PART 1
 function EssaysSection({ profile, addEssay, updateEssay, removeEssay, addEssaySection, updateEssaySection, removeEssaySection, isComplete, toggleComplete }) {
   const getWordCount = (text) => text.split(/\s+/).filter(w => w).length;
   const getCharCount = (text) => text.length;
@@ -947,7 +936,6 @@ function EssaysSection({ profile, addEssay, updateEssay, removeEssay, addEssaySe
                   value={essay.essayType}
                   onChange={(e) => {
                     updateEssay(index, 'essayType', e.target.value);
-                    // Update default word count based on essay type for US style
                     if (essay.styleType === 'US') {
                       updateEssay(index, 'maxWordCount', e.target.value === 'Personal Statement' ? 650 : 300);
                     }
@@ -1116,8 +1104,6 @@ function EssaysSection({ profile, addEssay, updateEssay, removeEssay, addEssaySe
   );
 }
 
-// Continue with remaining sections in next message due to length...
-// Extracurriculars Section
 function ExtracurricularsSection({ profile, addExtracurricular, updateExtracurricular, removeExtracurricular, isComplete, toggleComplete }) {
   return (
     <SectionWrapper 
@@ -1219,7 +1205,6 @@ function ExtracurricularsSection({ profile, addExtracurricular, updateExtracurri
   );
 }
 
-// Awards Section
 function AwardsSection({ profile, addAward, updateAward, removeAward, isComplete, toggleComplete }) {
   return (
     <SectionWrapper 
@@ -1321,7 +1306,6 @@ function AwardsSection({ profile, addAward, updateAward, removeAward, isComplete
   );
 }
 
-// Test Scores Section
 function TestScoresSection({ profile, addTestScore, updateTestScore, removeTestScore, getTestScoreFields, isComplete, toggleComplete }) {
   const testTypes = ['SAT', 'ACT', 'TMUA', 'ESAT', 'LNAT', 'BMAT', 'UCAT', 'IELTS', 'TOEFL', 'AP', 'Other'];
   
@@ -1438,7 +1422,6 @@ function TestScoresSection({ profile, addTestScore, updateTestScore, removeTestS
   );
 }
 
-// Academics Section
 function AcademicsSection({ profile, setProfile, addAcademicSubject, updateAcademicSubject, removeAcademicSubject, isComplete, toggleComplete }) {
   const [showModal, setShowModal] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
@@ -1471,13 +1454,11 @@ function AcademicsSection({ profile, setProfile, addAcademicSubject, updateAcade
     }
     
     if (editingIndex !== null) {
-      // Update existing
       updateAcademicSubject(editingIndex, 'name', modalData.name);
       updateAcademicSubject(editingIndex, 'grade', modalData.grade);
       updateAcademicSubject(editingIndex, 'gradeType', modalData.gradeType);
       updateAcademicSubject(editingIndex, 'curriculumType', modalData.curriculumType);
     } else {
-      // Add new
       addAcademicSubject(modalData);
     }
     
@@ -1753,7 +1734,6 @@ function AcademicsSection({ profile, setProfile, addAcademicSubject, updateAcade
   );
 }
 
-// Section Wrapper Component
 function SectionWrapper({ icon, title, subtitle, children }) {
   return (
     <div>
@@ -1799,7 +1779,6 @@ function SectionWrapper({ icon, title, subtitle, children }) {
   );
 }
 
-// Circular Progress Component
 function CircularProgress({ percentage }) {
   const radius = 45;
   const circumference = 2 * Math.PI * radius;

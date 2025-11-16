@@ -27,7 +27,6 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
   try {
-    // Check if user is admin
     const session = await getSession();
     if (!session || session.role !== 'admin') {
       return NextResponse.json(
@@ -68,7 +67,6 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // Handle thumbnail upload if provided
     if (thumbnailFile && thumbnailFile.size > 0) {
       const base64Result = await ImageUpload.convertToBase64(thumbnailFile);
       updates.thumbnail = base64Result.data;
@@ -99,7 +97,6 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    // Check if user is admin
     const session = await getSession();
     if (!session || session.role !== 'admin') {
       return NextResponse.json(

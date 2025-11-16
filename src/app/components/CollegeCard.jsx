@@ -25,7 +25,6 @@ export default function CollegeCard({ college, onViewInsights, onAddToList }) {
       {/* Thumbnail */}
       {college.thumbnail && (
         <div className="w-full h-48 overflow-hidden bg-black/50">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img 
             src={college.thumbnail} 
             alt={college.name}

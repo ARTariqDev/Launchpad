@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { UserProfile } from "@/models/UserProfile";
+import { Extracurricular } from "@/models/Extracurricular";
 
 export async function POST(request) {
   try {
@@ -13,11 +14,11 @@ export async function POST(request) {
       );
     }
 
-    const { collegeId } = await request.json();
+    const { activityId } = await request.json();
 
-    if (!collegeId) {
+    if (!activityId) {
       return NextResponse.json(
-        { error: "College ID is required" },
+        { error: "Activity ID is required" },
         { status: 400 }
       );
     }
@@ -31,33 +32,33 @@ export async function POST(request) {
       );
     }
 
-    const savedColleges = profile.savedColleges || [];
+    const savedExtracurriculars = profile.savedExtracurriculars || [];
 
-    if (savedColleges.includes(collegeId)) {
+    if (savedExtracurriculars.includes(activityId)) {
       return NextResponse.json({
         success: true,
-        message: "College already in your list",
+        message: "Activity already in your list",
         alreadySaved: true
       });
     }
 
-    savedColleges.push(collegeId);
-    await UserProfile.updateField(session.userId, 'savedColleges', savedColleges);
+    savedExtracurriculars.push(activityId);
+    await UserProfile.updateField(session.userId, 'savedExtracurriculars', savedExtracurriculars);
 
     return NextResponse.json({
       success: true,
-      message: "College added to your list"
+      message: "Activity added to your list"
     });
   } catch (error) {
-    console.error("Error adding college to list:", error);
+    console.error("Error adding activity to list:", error);
     return NextResponse.json(
-      { error: "Failed to add college to list" },
+      { error: "Failed to add activity to list" },
       { status: 500 }
     );
   }
 }
 
-export async function GET(request) {
+export async function GET() {
   try {
     const session = await getSession();
 
@@ -69,33 +70,35 @@ export async function GET(request) {
     }
 
     const profile = await UserProfile.findByUserId(session.userId);
+    console.log("Profile for extracurriculars:", profile ? "found" : "not found");
 
     if (!profile) {
       return NextResponse.json({
         success: true,
-        colleges: []
+        extracurriculars: []
       });
     }
 
-    const { University } = require("@/models/University");
-    const savedCollegeIds = profile.savedColleges || [];
-    const colleges = [];
+    const savedActivityIds = profile.savedExtracurriculars || [];
+    console.log("Saved extracurricular IDs:", savedActivityIds);
+    const extracurriculars = [];
     
-    for (const collegeId of savedCollegeIds) {
-      const college = await University.findById(collegeId);
-      if (college) {
-        colleges.push(college);
+    for (const activityId of savedActivityIds) {
+      const activity = await Extracurricular.findById(activityId);
+      if (activity) {
+        extracurriculars.push(activity);
       }
     }
 
+    console.log("Returning extracurriculars:", extracurriculars.length);
     return NextResponse.json({
       success: true,
-      colleges
+      extracurriculars
     });
   } catch (error) {
-    console.error("Error fetching saved colleges:", error);
+    console.error("Error fetching saved extracurriculars:", error);
     return NextResponse.json(
-      { error: "Failed to fetch saved colleges" },
+      { error: "Failed to fetch saved extracurriculars" },
       { status: 500 }
     );
   }
@@ -112,11 +115,11 @@ export async function DELETE(request) {
       );
     }
 
-    const { collegeId } = await request.json();
+    const { activityId } = await request.json();
 
-    if (!collegeId) {
+    if (!activityId) {
       return NextResponse.json(
-        { error: "College ID is required" },
+        { error: "Activity ID is required" },
         { status: 400 }
       );
     }
@@ -130,19 +133,19 @@ export async function DELETE(request) {
       );
     }
 
-    const savedColleges = (profile.savedColleges || []).filter(
-      id => id.toString() !== collegeId
+    const savedExtracurriculars = (profile.savedExtracurriculars || []).filter(
+      id => id.toString() !== activityId
     );
-    await UserProfile.updateField(session.userId, 'savedColleges', savedColleges);
+    await UserProfile.updateField(session.userId, 'savedExtracurriculars', savedExtracurriculars);
 
     return NextResponse.json({
       success: true,
-      message: "College removed from your list"
+      message: "Activity removed from your list"
     });
   } catch (error) {
-    console.error("Error removing college from list:", error);
+    console.error("Error removing activity from list:", error);
     return NextResponse.json(
-      { error: "Failed to remove college from list" },
+      { error: "Failed to remove activity from list" },
       { status: 500 }
     );
   }

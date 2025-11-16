@@ -45,7 +45,6 @@ export async function POST(request) {
       );
     }
 
-    // Generate profile hash for cache invalidation
     const profileDataHash = JSON.stringify({
       majors: profile.majors || [],
       nationality: profile.nationality || '',
@@ -56,7 +55,6 @@ export async function POST(request) {
       efc: profile.efc || null
     });
 
-    // Check if we have cached insights for this college
     if (!forceRefresh && profile.collegeInsights) {
       const cachedInsight = profile.collegeInsights.find(
         insight => insight.collegeId === collegeId && insight.profileHash === profileDataHash
@@ -71,13 +69,11 @@ export async function POST(request) {
       }
     }
 
-    // Prepare user profile summary for GPT
     const userMajors = profile.majors?.map(m => m.name || m.major).join(", ") || "Not specified";
     const userGPA = profile.academics?.gpa || "Not specified";
     const userEFC = profile.efc !== undefined ? profile.efc : null;
     const userNationality = profile.nationality || "Not specified";
     
-    // Determine if student is domestic or international for this college
     const collegeCountry = typeof college.location === 'string'
       ? college.country
       : college.location?.country;
@@ -116,7 +112,6 @@ export async function POST(request) {
       ? `${profile.awards.length} awards including: ${profile.awards.slice(0, 3).map(a => a.name).join(", ")}`
       : "No awards listed";
 
-    // Check if college offers user's majors
     const collegeMajors = college.majors || [];
     const majorMatches = profile.majors?.filter(userMajor =>
       collegeMajors.some(collegeMajor =>
@@ -125,7 +120,6 @@ export async function POST(request) {
       )
     ) || [];
 
-    // Format location
     const locationString = typeof college.location === 'string'
       ? college.location
       : college.location
@@ -133,6 +127,12 @@ export async function POST(request) {
         : "Not specified";
 
     const prompt = `You are a college admissions expert. Analyze this student's fit for ${college.name}.
+
+CRITICAL INSTRUCTION: Before analyzing, identify what admission criteria ${college.name} actually uses:
+- If this is a Canadian university (e.g., University of Alberta, UofT, UBC, McGill): They typically use HIGH SCHOOL GRADES only, NOT SAT/ACT scores
+- If this is a UK university: They use A-Levels, IB, or equivalent, NOT SAT/ACT
+- If this is a US university: They typically use SAT/ACT, GPA, and holistic review
+DO NOT mention SAT/ACT scores as weaknesses or strengths if the college doesn't use them for admissions!
 
 STUDENT PROFILE:
 - Intended Majors: ${userMajors}
@@ -172,9 +172,13 @@ FINANCIAL AID (REQUIRED):
 - International student aid available?
 
 ADMISSIONS PROFILE (REQUIRED - PROVIDE ACTUAL RANGES):
-- Middle 50% SAT range (e.g., "1460-1580")
-- Middle 50% ACT range (e.g., "33-35")
-- Average GPA of admitted students (e.g., "3.9-4.0 unweighted")
+- IMPORTANT: Only include SAT/ACT if this college actually uses them for admissions!
+- For Canadian universities: Most use high school grades/GPA only, NOT SAT/ACT
+- For UK universities: Use A-Levels, IB, or equivalent, NOT SAT/ACT
+- For US universities: Include SAT/ACT ranges
+- Middle 50% SAT range if used (e.g., "1460-1580" or "Not used for admissions")
+- Middle 50% ACT range if used (e.g., "33-35" or "Not used for admissions")
+- Average GPA/grades of admitted students (use local system: GPA for US, average % for Canada, A-Level grades for UK)
 - Acceptance rate for domestic vs international
 - % of international students (e.g., "12%")
 
@@ -209,13 +213,24 @@ ANALYSIS REQUIRED:
 9. Include college information: need-blind status, international friendliness, research/internship opportunities, typical admitted student stats
 
 SCORING GUIDELINES:
+CRITICAL: Only use SAT/ACT scores if this college actually requires or accepts them for admissions!
+- Canadian universities (UofT, UBC, McGill, Alberta, etc.): Base score on HIGH SCHOOL GRADES/GPA only, ignore SAT/ACT completely
+- UK universities (Oxford, Cambridge, Imperial, etc.): Base score on A-Levels, IB, or equivalent only
+- US universities: Use SAT/ACT scores as one factor
+
+For US colleges with SAT/ACT:
 - SAT below 1000 for top colleges (acceptance <20%): 2-4/10 (very unlikely)
 - SAT 1000-1200 for selective colleges (acceptance <30%): 4-6/10 (reach)
 - SAT 1200-1400 for competitive colleges: 5-7/10 (match/reach)
 - SAT 1400-1500 for top colleges: 7-8/10 (competitive)
 - SAT 1500+ for top colleges: 8-10/10 (strong candidate)
-- Consider GPA, extracurriculars, and essays in final score
-- International students typically need higher scores
+
+For Canadian/UK/other non-US colleges:
+- Base fit score on relevant admission criteria (grades, coursework rigor, program fit)
+- DO NOT penalize students for low SAT scores if the college doesn't use them
+- DO NOT mention SAT/ACT as a weakness if the college doesn't require them
+
+Always consider: GPA/grades, course rigor, extracurriculars, essays, and country-specific requirements
 
 Return your analysis in this EXACT JSON format with SPECIFIC NUMBERS:
 {
@@ -234,7 +249,7 @@ Return your analysis in this EXACT JSON format with SPECIFIC NUMBERS:
     "internationalFriendly": "International students: XX% of student body (~X,XXX students). Support: [International student office, visa sponsorship for OPT/CPT, cultural organizations]. Acceptance rate for international: XX%",
     "culture": "[Specific description: e.g., 'Highly intellectual and research-focused with strong pre-professional programs. Students are academically driven, collaborative, and involved in numerous extracurriculars.']",
     "opportunities": "Research: [e.g., '90% of students participate in research, funded summer programs available']. Internships: [e.g., 'Strong career services, 85% secure internships']. Study abroad: [programs available]",
-    "admittedStudentProfile": "SAT middle 50%: XXXX-XXXX, ACT middle 50%: XX-XX, GPA: X.X-4.0 unweighted. Typical students have: [description of typical admits]",
+    "admittedStudentProfile": "SAT middle 50%: XXXX-XXXX (or 'Not used for admissions'), ACT middle 50%: XX-XX (or 'Not used for admissions'), GPA/Grades: [use appropriate grading system for country]. Typical students have: [description of typical admits including relevant admission criteria for this college]",
     "supplements": "[Number] supplemental essays required. Essay 1: [topic] (XXX words), Essay 2: [topic] (XXX words), [etc]. Interview: [Required/Optional/Not offered]. Additional: [portfolio/audition if applicable]",
     "requirements": "Application platform: [Common App/Coalition/etc]. Recommendation letters: [X teacher + X counselor]. Transcripts: Required. Test-optional: Yes/No. Deadlines: [REA/EA/ED/RD dates]. Application URL: [EXACT link like 'https://apply.college.edu' or 'https://www.commonapp.org/explore/college-name']. Additional: [any special requirements]"
   },
@@ -253,7 +268,6 @@ CRITICAL: You MUST provide specific numbers AND exact URLs for ALL fields. DO NO
 - EXACT application portal URLs (these are publicly available - provide the full URL)
 If you don't have exact current year data, provide approximate figures based on your knowledge with a note that they are approximate.`;
 
-    // Call OpenAI API
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
@@ -272,10 +286,8 @@ If you don't have exact current year data, provide approximate figures based on 
 
     const responseText = completion.choices[0].message.content.trim();
     
-    // Parse JSON response
     let insights;
     try {
-      // Try to extract JSON if there's extra text
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       insights = JSON.parse(jsonMatch ? jsonMatch[0] : responseText);
     } catch (parseError) {
@@ -286,15 +298,12 @@ If you don't have exact current year data, provide approximate figures based on 
       );
     }
 
-    // Cache the insights
     const collegeInsights = profile.collegeInsights || [];
 
-    // Remove old cache for this college if exists
     const updatedInsights = collegeInsights.filter(
       insight => insight.collegeId !== collegeId
     );
 
-    // Add new cache
     updatedInsights.push({
       collegeId,
       insights,

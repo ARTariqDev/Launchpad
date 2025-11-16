@@ -6,7 +6,6 @@ export async function POST(request) {
   try {
     const { firstName, lastName, username, email, password } = await request.json();
 
-    // Validation
     if (!firstName || !lastName || !username || !email || !password) {
       return NextResponse.json(
         { error: 'All fields are required' },
@@ -21,7 +20,6 @@ export async function POST(request) {
       );
     }
 
-    // Create user
     const user = await User.create({
       firstName,
       lastName,
@@ -31,7 +29,6 @@ export async function POST(request) {
       role: 'user'
     });
 
-    // Create session token
     const token = await createToken({
       userId: user._id.toString(),
       username: user.username,

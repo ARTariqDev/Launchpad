@@ -70,7 +70,6 @@ export default function CreateForm() {
     setSuccess("");
 
     try {
-      // Determine the API endpoint based on type
       let endpoint = "/api/universities";
       if (formData.type === "extracurricular") {
         endpoint = "/api/extracurriculars";
@@ -78,13 +77,10 @@ export default function CreateForm() {
         endpoint = "/api/scholarships";
       }
 
-      // Create FormData for file upload
       const data = new FormData();
       data.append("name", formData.name);
       
-      // Handle deadlines based on type
       if (formData.type === "university") {
-        // For universities, send array of deadlines and location
         data.append("deadlines", JSON.stringify(deadlines.filter(d => d.date)));
         data.append("location", JSON.stringify(location));
       } else if (formData.type === "extracurricular") {
@@ -108,7 +104,6 @@ export default function CreateForm() {
 
       if (response.ok) {
         setSuccess(`${formData.type.charAt(0).toUpperCase() + formData.type.slice(1)} created successfully!`);
-        // Reset form
         setFormData({
           type: "university",
           name: "",

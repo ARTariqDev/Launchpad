@@ -18,7 +18,6 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    // Check if user is admin
     const session = await getSession();
     if (!session || session.role !== 'admin') {
       return NextResponse.json(
@@ -33,7 +32,6 @@ export async function POST(request) {
     const description = formData.get('description');
     const thumbnailFile = formData.get('thumbnail');
 
-    // Validation
     if (!name || !date || !description) {
       return NextResponse.json(
         { error: 'Name, date, and description are required' },
@@ -43,13 +41,11 @@ export async function POST(request) {
 
     let thumbnailData = null;
 
-    // Handle thumbnail upload if provided
     if (thumbnailFile && thumbnailFile.size > 0) {
       const base64Result = await ImageUpload.convertToBase64(thumbnailFile);
       thumbnailData = base64Result.data;
     }
 
-    // Create extracurricular
     const extracurricular = await Extracurricular.create({
       name,
       date,

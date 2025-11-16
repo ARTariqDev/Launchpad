@@ -74,7 +74,6 @@ export default function CollegesPage() {
           ? college.location
           : college.location?.country;
         
-        // Handle multiple country name variations (e.g., "USA|United States")
         const countryVariations = filters.country.split('|');
         return countryVariations.some(variant => 
           country?.toLowerCase().includes(variant.toLowerCase())
@@ -180,7 +179,7 @@ export default function CollegesPage() {
       <Navbar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="mb-8">
+        <div className="mb-8 animate-fade-in">
           <h1
             className="font-bold mb-2"
             style={{
@@ -196,7 +195,7 @@ export default function CollegesPage() {
           </p>
         </div>
 
-        <div className="mb-8 space-y-4">
+        <div className="mb-8 space-y-4 animate-fade-in-delay-1">
           <div className="relative">
             <FontAwesomeIcon
               icon={faSearch}
@@ -283,18 +282,19 @@ export default function CollegesPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredColleges.map((college) => (
-            <CollegeCard
-              key={college._id}
-              college={college}
-              onViewInsights={handleViewInsights}
-              onAddToList={handleAddToList}
-            />
+          {filteredColleges.map((college, index) => (
+            <div key={college._id} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+              <CollegeCard
+                college={college}
+                onViewInsights={handleViewInsights}
+                onAddToList={handleAddToList}
+              />
+            </div>
           ))}
         </div>
 
         {filteredColleges.length === 0 && (
-          <div className="text-center py-12">
+          <div className="text-center py-12 animate-fade-in">
             <p style={{ color: "var(--text-secondary)", fontSize: "18px" }}>
               No colleges found matching your criteria
             </p>

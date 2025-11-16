@@ -7,17 +7,24 @@ import {
   faLightbulb, 
   faExclamationTriangle,
   faTrophy,
-  faSpinner
+  faSpinner,
+  faComments,
+  faTimes
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function ProfileInsights({ profile }) {
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryFeedback, setCategoryFeedback] = useState(null);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState('');
 
   const analyzeProfile = async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
+    setUpdateMessage('');
     
     try {
       const response = await fetch('/api/analyze-profile', {
@@ -31,7 +38,6 @@ export default function ProfileInsights({ profile }) {
       const data = await response.json();
       
       if (!response.ok) {
-        // Handle rate limit specifically
         if (response.status === 429) {
           setError('Rate limit exceeded. Please wait 10-15 seconds and try again.');
         } else {
@@ -42,7 +48,16 @@ export default function ProfileInsights({ profile }) {
 
       setAnalysis(data.analysis);
       
-      // Save analysis to profile if it's new (not cached)
+      if (data.cached) {
+        setUpdateMessage('Using cached analysis - no changes detected');
+      } else if (data.partial) {
+        setUpdateMessage('✓ Updated only the changed categories');
+      }
+      
+      if (data.cached || data.partial) {
+        setTimeout(() => setUpdateMessage(''), 3000);
+      }
+      
       if (data.shouldCache && !data.cached) {
         await saveAnalysisToProfile(data.analysis);
       }
@@ -74,7 +89,6 @@ export default function ProfileInsights({ profile }) {
 
   useEffect(() => {
     analyzeProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getScoreColor = (score) => {
@@ -90,6 +104,47 @@ export default function ProfileInsights({ profile }) {
     if (score >= 6) return 'Average';
     if (score >= 5) return 'Below Average';
     return 'Needs Work';
+  };
+
+  const getCategoryFeedback = async (category) => {
+    setSelectedCategory(category);
+    setLoadingFeedback(true);
+    setCategoryFeedback(null);
+
+    try {
+      const response = await fetch('/api/category-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          profile, 
+          category,
+          currentScore: analysis.scores[category]
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get feedback');
+      }
+
+      setCategoryFeedback(data.feedback);
+    } catch (err) {
+      console.error('Feedback error:', err);
+      setCategoryFeedback({
+        assessment: 'Unable to load detailed feedback at this time.',
+        strengths: [],
+        weaknesses: [],
+        recommendations: ['Please try again later.']
+      });
+    } finally {
+      setLoadingFeedback(false);
+    }
+  };
+
+  const closeFeedbackModal = () => {
+    setSelectedCategory(null);
+    setCategoryFeedback(null);
   };
 
   if (loading) {
@@ -143,8 +198,7 @@ export default function ProfileInsights({ profile }) {
     testScores: 'Test Scores',
     extracurriculars: 'Extracurricular Impact',
     awards: 'Awards & Recognition',
-    essays: 'Essay Quality',
-    coherence: 'Profile Coherence'
+    essays: 'Essay Quality'
   };
 
   return (
@@ -167,6 +221,16 @@ export default function ProfileInsights({ profile }) {
         <p style={{ color: "var(--text-secondary)", fontSize: "16px" }}>
           AI-powered analysis of your application profile
         </p>
+        {updateMessage && (
+          <div className="mt-3 p-2 rounded-lg" style={{ 
+            backgroundColor: "rgba(16, 185, 129, 0.1)", 
+            border: "1px solid rgba(16, 185, 129, 0.3)" 
+          }}>
+            <p style={{ color: "#10b981", fontSize: "14px" }}>
+              {updateMessage}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Overall Score */}
@@ -222,15 +286,31 @@ export default function ProfileInsights({ profile }) {
                 <span style={{ color: "var(--text-primary)", fontSize: "14px" }}>
                   {categoryLabels[category]}
                 </span>
-                <span 
-                  className="font-bold"
-                  style={{ 
-                    color: getScoreColor(score),
-                    fontFamily: "var(--font-display)"
-                  }}
-                >
-                  {score}/10
-                </span>
+                <div className="flex items-center gap-3">
+                  <span 
+                    className="font-bold"
+                    style={{ 
+                      color: getScoreColor(score),
+                      fontFamily: "var(--font-display)"
+                    }}
+                  >
+                    {score}/10
+                  </span>
+                  <button
+                    onClick={() => getCategoryFeedback(category)}
+                    className="px-3 py-1 rounded-lg border transition-all hover:scale-105"
+                    style={{
+                      borderColor: "rgba(255, 255, 255, 0.3)",
+                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                      color: "var(--text-primary)",
+                      fontSize: "12px"
+                    }}
+                    title="Get detailed feedback"
+                  >
+                    <FontAwesomeIcon icon={faComments} className="w-3 mr-1" />
+                    Feedback
+                  </button>
+                </div>
               </div>
               <div 
                 className="h-2 rounded-full overflow-hidden"
@@ -364,6 +444,192 @@ export default function ProfileInsights({ profile }) {
           Refresh Analysis
         </button>
       </div>
+
+      {/* Feedback Modal */}
+      {selectedCategory && (
+        <div 
+          className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 animate-fade-in"
+          onClick={closeFeedbackModal}
+        >
+          <div 
+            className="max-w-3xl w-full max-h-[90vh] overflow-y-auto rounded-xl border-2 p-6"
+            style={{
+              backgroundColor: "var(--primary-bg)",
+              borderColor: "var(--card-border)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 
+                  className="font-bold mb-2"
+                  style={{
+                    color: "var(--text-primary)",
+                    fontSize: "24px",
+                    fontFamily: "var(--font-display)",
+                  }}
+                >
+                  {categoryLabels[selectedCategory]} Feedback
+                </h3>
+                <div className="flex items-center gap-3">
+                  <span 
+                    className="text-3xl font-bold"
+                    style={{ 
+                      color: getScoreColor(analysis.scores[selectedCategory]),
+                      fontFamily: "var(--font-display)"
+                    }}
+                  >
+                    {analysis.scores[selectedCategory]}/10
+                  </span>
+                  <span style={{ color: "var(--text-secondary)" }}>
+                    {getScoreLabel(analysis.scores[selectedCategory])}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={closeFeedbackModal}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                style={{ color: "var(--text-primary)" }}
+              >
+                <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
+              </button>
+            </div>
+
+            {loadingFeedback ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <FontAwesomeIcon 
+                  icon={faSpinner} 
+                  className="animate-spin text-4xl mb-4"
+                  style={{ color: "var(--text-primary)" }}
+                />
+                <p style={{ color: "var(--text-secondary)" }}>
+                  Generating detailed feedback...
+                </p>
+              </div>
+            ) : categoryFeedback && (
+              <div className="space-y-6">
+                {/* Assessment */}
+                <div>
+                  <h4 
+                    className="font-bold mb-3 flex items-center gap-2"
+                    style={{
+                      color: "var(--text-primary)",
+                      fontSize: "18px",
+                      fontFamily: "var(--font-display)",
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faChartLine} style={{ color: "#3b82f6" }} />
+                    Overall Assessment
+                  </h4>
+                  <p style={{ color: "var(--text-secondary)", fontSize: "15px", lineHeight: "1.6" }}>
+                    {categoryFeedback.assessment}
+                  </p>
+                </div>
+
+                {/* Strengths */}
+                {categoryFeedback.strengths && categoryFeedback.strengths.length > 0 && (
+                  <div>
+                    <h4 
+                      className="font-bold mb-3 flex items-center gap-2"
+                      style={{
+                        color: "var(--text-primary)",
+                        fontSize: "18px",
+                        fontFamily: "var(--font-display)",
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faTrophy} style={{ color: "#10b981" }} />
+                      What You&apos;re Doing Well
+                    </h4>
+                    <ul className="space-y-2">
+                      {categoryFeedback.strengths.map((strength, index) => (
+                        <li 
+                          key={index}
+                          className="flex items-start gap-2 p-3 rounded-lg"
+                          style={{ 
+                            backgroundColor: "rgba(16, 185, 129, 0.1)",
+                            color: "var(--text-secondary)",
+                            fontSize: "14px"
+                          }}
+                        >
+                          <span style={{ color: "#10b981", minWidth: "20px" }}>✓</span>
+                          <span>{strength}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Weaknesses */}
+                {categoryFeedback.weaknesses && categoryFeedback.weaknesses.length > 0 && (
+                  <div>
+                    <h4 
+                      className="font-bold mb-3 flex items-center gap-2"
+                      style={{
+                        color: "var(--text-primary)",
+                        fontSize: "18px",
+                        fontFamily: "var(--font-display)",
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faExclamationTriangle} style={{ color: "#f59e0b" }} />
+                      Areas of Concern
+                    </h4>
+                    <ul className="space-y-2">
+                      {categoryFeedback.weaknesses.map((weakness, index) => (
+                        <li 
+                          key={index}
+                          className="flex items-start gap-2 p-3 rounded-lg"
+                          style={{ 
+                            backgroundColor: "rgba(245, 158, 11, 0.1)",
+                            color: "var(--text-secondary)",
+                            fontSize: "14px"
+                          }}
+                        >
+                          <span style={{ color: "#f59e0b", minWidth: "20px" }}>!</span>
+                          <span>{weakness}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Recommendations */}
+                {categoryFeedback.recommendations && categoryFeedback.recommendations.length > 0 && (
+                  <div>
+                    <h4 
+                      className="font-bold mb-3 flex items-center gap-2"
+                      style={{
+                        color: "var(--text-primary)",
+                        fontSize: "18px",
+                        fontFamily: "var(--font-display)",
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faLightbulb} style={{ color: "#3b82f6" }} />
+                      Specific Recommendations
+                    </h4>
+                    <ul className="space-y-2">
+                      {categoryFeedback.recommendations.map((rec, index) => (
+                        <li 
+                          key={index}
+                          className="flex items-start gap-2 p-3 rounded-lg"
+                          style={{ 
+                            backgroundColor: "rgba(59, 130, 246, 0.1)",
+                            color: "var(--text-secondary)",
+                            fontSize: "14px"
+                          }}
+                        >
+                          <span style={{ color: "#3b82f6", minWidth: "20px" }}>→</span>
+                          <span>{rec}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

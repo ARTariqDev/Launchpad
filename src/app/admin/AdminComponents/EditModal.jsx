@@ -58,11 +58,9 @@ export default function EditModal({ item, type, onClose, onSave }) {
       ...formData 
     };
     
-    // For universities, include deadlines array and location
     if (type === "universities") {
       updatedItem.deadlines = deadlines.filter(d => d.date);
       updatedItem.location = location;
-      // Remove description for universities
       delete updatedItem.description;
     }
     

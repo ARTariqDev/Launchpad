@@ -47,6 +47,11 @@ export class UserProfile {
       },
       profileAnalysis: profileData.profileAnalysis || null,
       savedColleges: profileData.savedColleges || [],
+      savedScholarships: profileData.savedScholarships || [],
+      savedExtracurriculars: profileData.savedExtracurriculars || [],
+      completedColleges: profileData.completedColleges || [],
+      completedScholarships: profileData.completedScholarships || [],
+      completedExtracurriculars: profileData.completedExtracurriculars || [],
       collegeInsights: profileData.collegeInsights || [],
       updatedAt: new Date()
     };

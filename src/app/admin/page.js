@@ -22,7 +22,6 @@ export default function Admin() {
       easing: "ease-out",
     });
 
-    // Check if user is admin
     const checkAuth = async () => {
       try {
         const response = await fetch("/api/auth/session");
@@ -31,7 +30,6 @@ export default function Admin() {
         if (!data.authenticated) {
           router.push("/login");
         } else if (data.user.role !== "admin") {
-          // Redirect non-admin users to dashboard
           router.push("/dashboard");
         } else {
           setLoading(false);

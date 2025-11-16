@@ -8,17 +8,13 @@ export class ImageUpload {
       const db = client.db('launchpad');
       const bucket = new db.GridFSBucket(db, { bucketName: 'images' });
 
-      // Convert File/Blob to Buffer
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      // Create readable stream from buffer
       const readableStream = Readable.from(buffer);
 
-      // Generate unique filename with timestamp
       const uniqueFilename = `${Date.now()}-${filename}`;
 
-      // Upload to GridFS
       const uploadStream = bucket.openUploadStream(uniqueFilename, {
         contentType: file.type,
         metadata: {
@@ -27,7 +23,6 @@ export class ImageUpload {
         }
       });
 
-      // Pipe the buffer to GridFS
       await new Promise((resolve, reject) => {
         readableStream.pipe(uploadStream)
           .on('error', reject)
@@ -63,7 +58,6 @@ export class ImageUpload {
 
       const buffer = Buffer.concat(chunks);
       
-      // Get file metadata
       const files = await db.collection('images.files').findOne({ 
         _id: new ObjectId(fileId) 
       });
@@ -96,7 +90,6 @@ export class ImageUpload {
     }
   }
 
-  // Alternative: Store base64 encoded images directly in document
   static async convertToBase64(file) {
     try {
       const arrayBuffer = await file.arrayBuffer();

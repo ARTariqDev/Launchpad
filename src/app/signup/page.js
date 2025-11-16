@@ -30,7 +30,6 @@ export default function SignUp() {
       easing: "ease-out",
     });
 
-    // Check if user is already logged in
     const checkSession = async () => {
       try {
         const response = await fetch("/api/auth/session");
@@ -58,7 +57,6 @@ export default function SignUp() {
     setLoading(true);
     setError("");
 
-    // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
       setLoading(false);

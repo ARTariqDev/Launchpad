@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { UserProfile } from "@/models/UserProfile";
+import { Scholarship } from "@/models/Scholarship";
 
 export async function POST(request) {
   try {
@@ -13,11 +14,11 @@ export async function POST(request) {
       );
     }
 
-    const { collegeId } = await request.json();
+    const { scholarshipId } = await request.json();
 
-    if (!collegeId) {
+    if (!scholarshipId) {
       return NextResponse.json(
-        { error: "College ID is required" },
+        { error: "Scholarship ID is required" },
         { status: 400 }
       );
     }
@@ -31,33 +32,33 @@ export async function POST(request) {
       );
     }
 
-    const savedColleges = profile.savedColleges || [];
+    const savedScholarships = profile.savedScholarships || [];
 
-    if (savedColleges.includes(collegeId)) {
+    if (savedScholarships.includes(scholarshipId)) {
       return NextResponse.json({
         success: true,
-        message: "College already in your list",
+        message: "Scholarship already in your list",
         alreadySaved: true
       });
     }
 
-    savedColleges.push(collegeId);
-    await UserProfile.updateField(session.userId, 'savedColleges', savedColleges);
+    savedScholarships.push(scholarshipId);
+    await UserProfile.updateField(session.userId, 'savedScholarships', savedScholarships);
 
     return NextResponse.json({
       success: true,
-      message: "College added to your list"
+      message: "Scholarship added to your list"
     });
   } catch (error) {
-    console.error("Error adding college to list:", error);
+    console.error("Error adding scholarship to list:", error);
     return NextResponse.json(
-      { error: "Failed to add college to list" },
+      { error: "Failed to add scholarship to list" },
       { status: 500 }
     );
   }
 }
 
-export async function GET(request) {
+export async function GET() {
   try {
     const session = await getSession();
 
@@ -69,33 +70,35 @@ export async function GET(request) {
     }
 
     const profile = await UserProfile.findByUserId(session.userId);
+    console.log("Profile for scholarships:", profile ? "found" : "not found");
 
     if (!profile) {
       return NextResponse.json({
         success: true,
-        colleges: []
+        scholarships: []
       });
     }
 
-    const { University } = require("@/models/University");
-    const savedCollegeIds = profile.savedColleges || [];
-    const colleges = [];
+    const savedScholarshipIds = profile.savedScholarships || [];
+    console.log("Saved scholarship IDs:", savedScholarshipIds);
+    const scholarships = [];
     
-    for (const collegeId of savedCollegeIds) {
-      const college = await University.findById(collegeId);
-      if (college) {
-        colleges.push(college);
+    for (const scholarshipId of savedScholarshipIds) {
+      const scholarship = await Scholarship.findById(scholarshipId);
+      if (scholarship) {
+        scholarships.push(scholarship);
       }
     }
 
+    console.log("Returning scholarships:", scholarships.length);
     return NextResponse.json({
       success: true,
-      colleges
+      scholarships
     });
   } catch (error) {
-    console.error("Error fetching saved colleges:", error);
+    console.error("Error fetching saved scholarships:", error);
     return NextResponse.json(
-      { error: "Failed to fetch saved colleges" },
+      { error: "Failed to fetch saved scholarships" },
       { status: 500 }
     );
   }
@@ -112,11 +115,11 @@ export async function DELETE(request) {
       );
     }
 
-    const { collegeId } = await request.json();
+    const { scholarshipId } = await request.json();
 
-    if (!collegeId) {
+    if (!scholarshipId) {
       return NextResponse.json(
-        { error: "College ID is required" },
+        { error: "Scholarship ID is required" },
         { status: 400 }
       );
     }
@@ -130,19 +133,19 @@ export async function DELETE(request) {
       );
     }
 
-    const savedColleges = (profile.savedColleges || []).filter(
-      id => id.toString() !== collegeId
+    const savedScholarships = (profile.savedScholarships || []).filter(
+      id => id.toString() !== scholarshipId
     );
-    await UserProfile.updateField(session.userId, 'savedColleges', savedColleges);
+    await UserProfile.updateField(session.userId, 'savedScholarships', savedScholarships);
 
     return NextResponse.json({
       success: true,
-      message: "College removed from your list"
+      message: "Scholarship removed from your list"
     });
   } catch (error) {
-    console.error("Error removing college from list:", error);
+    console.error("Error removing scholarship from list:", error);
     return NextResponse.json(
-      { error: "Failed to remove college from list" },
+      { error: "Failed to remove scholarship from list" },
       { status: 500 }
     );
   }

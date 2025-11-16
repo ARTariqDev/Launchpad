@@ -18,7 +18,6 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    // Check if user is admin
     const session = await getSession();
     if (!session || session.role !== 'admin') {
       return NextResponse.json(
@@ -33,7 +32,6 @@ export async function POST(request) {
     const locationJson = formData.get('location');
     const thumbnailFile = formData.get('thumbnail');
 
-    // Parse deadlines array
     let deadlines = [];
     if (deadlinesJson) {
       try {
@@ -46,7 +44,6 @@ export async function POST(request) {
       }
     }
 
-    // Parse location object
     let location = { city: '', state: '', country: '' };
     if (locationJson) {
       try {
@@ -59,7 +56,6 @@ export async function POST(request) {
       }
     }
 
-    // Validation
     if (!name) {
       return NextResponse.json(
         { error: 'Name is required' },
@@ -83,14 +79,11 @@ export async function POST(request) {
 
     let thumbnailData = null;
 
-    // Handle thumbnail upload if provided
     if (thumbnailFile && thumbnailFile.size > 0) {
-      // Using base64 approach for simplicity (can switch to GridFS for larger files)
       const base64Result = await ImageUpload.convertToBase64(thumbnailFile);
       thumbnailData = base64Result.data;
     }
 
-    // Create university
     const university = await University.create({
       name,
       deadlines,

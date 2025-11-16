@@ -18,7 +18,6 @@ export default function Home() {
       easing: "ease-out",
     });
 
-    // Check if user is already logged in
     const checkSession = async () => {
       try {
         const response = await fetch("/api/auth/session");

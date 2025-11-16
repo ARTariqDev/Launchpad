@@ -13,7 +13,6 @@ export default function ExtracurricularDetailsModal({ activity, onClose }) {
   const renderDescriptionWithLinks = (text) => {
     if (!text) return null;
     
-    // Convert URLs to clickable links
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     return text.replace(
       urlRegex,
@@ -69,7 +68,6 @@ export default function ExtracurricularDetailsModal({ activity, onClose }) {
 
         {activity.thumbnail && (
           <div className="w-full h-64 mb-6 rounded-lg overflow-hidden bg-black/50">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img 
               src={activity.thumbnail} 
               alt={activity.name}

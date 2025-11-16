@@ -15,6 +15,7 @@ export async function GET() {
     const profile = await UserProfile.findByUserId(session.userId);
     
     return NextResponse.json({ 
+      success: true,
       profile: profile || {
         userId: session.userId,
         major: '',
@@ -31,7 +32,13 @@ export async function GET() {
           type: '',
           gpa: null,
           subjects: []
-        }
+        },
+        savedColleges: [],
+        savedScholarships: [],
+        savedExtracurriculars: [],
+        completedColleges: [],
+        completedScholarships: [],
+        completedExtracurriculars: []
       }
     });
   } catch (error) {
@@ -56,13 +63,17 @@ export async function PUT(request) {
     const body = await request.json();
     const { field, value, profileData } = body;
 
+    console.log('PUT /api/profile - field:', field);
+    if (field && (field.startsWith('completed') || field.startsWith('saved'))) {
+      console.log('Updating list field:', field);
+      console.log('New value length:', Array.isArray(value) ? value.length : 'not an array');
+    }
+
     let result;
     
     if (profileData) {
-      // Update entire profile
       result = await UserProfile.createOrUpdate(session.userId, profileData);
     } else if (field) {
-      // Update single field
       result = await UserProfile.updateField(session.userId, field, value);
     } else {
       return NextResponse.json(
@@ -70,6 +81,8 @@ export async function PUT(request) {
         { status: 400 }
       );
     }
+
+    console.log('Update successful, result has field?', result && field ? result[field] !== undefined : 'N/A');
 
     return NextResponse.json({
       success: true,

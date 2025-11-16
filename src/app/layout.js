@@ -1,5 +1,6 @@
 import { Space_Mono, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import Footer from "./components/Footer";
 
 const spaceMono = Space_Mono({
   variable: "--font-space-mono",
@@ -27,8 +28,12 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body
         className={`${spaceMono.variable} ${jetbrainsMono.variable} antialiased`}
+        style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}
       >
-        {children}
+        <main style={{ flex: '1 0 auto' }}>
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
   );

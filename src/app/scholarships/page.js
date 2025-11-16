@@ -80,11 +80,41 @@ export default function ScholarshipsPage() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const handleSaveScholarship = (scholarshipName) => {
-    setToast({
-      message: `${scholarshipName} saved to your bookmarks!`,
-      type: "success"
-    });
+  const handleSaveScholarship = async (scholarshipId, scholarshipName) => {
+    try {
+      const response = await fetch("/api/user-scholarships", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scholarshipId })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (data.alreadySaved) {
+          setToast({
+            message: `${scholarshipName} is already in your list!`,
+            type: "info"
+          });
+        } else {
+          setToast({
+            message: `${scholarshipName} saved to your list!`,
+            type: "success"
+          });
+        }
+      } else {
+        setToast({
+          message: data.error || "Failed to save scholarship",
+          type: "error"
+        });
+      }
+    } catch (error) {
+      console.error("Error saving scholarship:", error);
+      setToast({
+        message: "Failed to save scholarship",
+        type: "error"
+      });
+    }
   };
 
   if (loading) {
@@ -108,7 +138,7 @@ export default function ScholarshipsPage() {
       <Navbar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="mb-8">
+        <div className="mb-8 animate-fade-in">
           <h1
             className="font-bold mb-2"
             style={{
@@ -124,7 +154,7 @@ export default function ScholarshipsPage() {
           </p>
         </div>
 
-        <div className="mb-8">
+        <div className="mb-8 animate-fade-in-delay-1">
           <div className="relative">
             <FontAwesomeIcon
               icon={faSearch}
@@ -150,18 +180,18 @@ export default function ScholarshipsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredScholarships.map((scholarship) => (
+          {filteredScholarships.map((scholarship, index) => (
             <div
               key={scholarship._id}
-              className="border-2 rounded-lg overflow-hidden hover:border-white/40 transition-all duration-300 transform hover:-translate-y-1 flex flex-col"
+              className="border-2 rounded-lg overflow-hidden hover:border-white/40 transition-all duration-300 transform hover:-translate-y-1 flex flex-col animate-fade-in"
               style={{
                 borderColor: "rgba(255, 255, 255, 0.2)",
                 backgroundColor: "rgba(0, 0, 0, 0.3)",
+                animationDelay: `${index * 50}ms`
               }}
             >
               {scholarship.thumbnail && (
                 <div className="w-full h-48 overflow-hidden bg-black/50">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img 
                     src={scholarship.thumbnail} 
                     alt={scholarship.name}
@@ -209,7 +239,7 @@ export default function ScholarshipsPage() {
 
                 <div className="flex gap-2 mt-auto">
                   <button
-                    onClick={() => handleSaveScholarship(scholarship.name)}
+                    onClick={() => handleSaveScholarship(scholarship._id, scholarship.name)}
                     className="flex-1 px-4 py-2 rounded-lg border-2 hover:bg-white/10 transition-all duration-200 flex items-center justify-center gap-2"
                     style={{
                       borderColor: "rgba(255, 255, 255, 0.3)",
