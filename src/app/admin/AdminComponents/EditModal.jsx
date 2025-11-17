@@ -15,10 +15,10 @@ export default function EditModal({ item, type, onClose, onSave }) {
   const [deadlines, setDeadlines] = useState(
     item?.deadlines && item.deadlines.length > 0 
       ? item.deadlines 
-      : [{ type: "REA", date: "" }]
+      : [{ type: "REA", date: "", customType: "" }]
   );
   const [location, setLocation] = useState(
-    item?.location || { city: "", state: "", country: "" }
+    item?.location || { city: "", state: "", country: "", customCountry: "" }
   );
 
   const handleChange = (e) => {
@@ -36,7 +36,7 @@ export default function EditModal({ item, type, onClose, onSave }) {
   };
 
   const addDeadline = () => {
-    setDeadlines([...deadlines, { type: "EA", date: "" }]);
+    setDeadlines([...deadlines, { type: "EA", date: "", customType: "" }]);
   };
 
   const removeDeadline = (index) => {
@@ -209,51 +209,72 @@ export default function EditModal({ item, type, onClose, onSave }) {
               </div>
               <div className="space-y-2">
                 {deadlines.map((deadline, index) => (
-                  <div key={index} className="flex gap-2 items-start">
-                    <div className="flex-1">
-                      <select
-                        value={deadline.type}
-                        onChange={(e) => handleDeadlineChange(index, "type", e.target.value)}
-                        className="w-full px-3 py-2 rounded-md border-2 bg-transparent focus:outline-none focus:border-white transition-colors cursor-pointer text-sm"
-                        style={{
-                          borderColor: "rgba(255, 255, 255, 0.2)",
-                          color: "var(--text-primary)",
-                          fontFamily: "var(--font-body)",
-                        }}
-                      >
-                        <option value="REA" style={{ backgroundColor: "var(--primary-bg)" }}>REA</option>
-                        <option value="EA" style={{ backgroundColor: "var(--primary-bg)" }}>EA</option>
-                        <option value="ED1" style={{ backgroundColor: "var(--primary-bg)" }}>ED1</option>
-                        <option value="ED2" style={{ backgroundColor: "var(--primary-bg)" }}>ED2</option>
-                        <option value="RD" style={{ backgroundColor: "var(--primary-bg)" }}>RD</option>
-                      </select>
+                  <div key={index} className="space-y-2">
+                    <div className="flex gap-2 items-start">
+                      <div className="flex-1">
+                        <select
+                          value={deadline.type}
+                          onChange={(e) => handleDeadlineChange(index, "type", e.target.value)}
+                          className="w-full px-3 py-2 rounded-md border-2 bg-transparent focus:outline-none focus:border-white transition-colors cursor-pointer text-sm"
+                          style={{
+                            borderColor: "rgba(255, 255, 255, 0.2)",
+                            color: "var(--text-primary)",
+                            fontFamily: "var(--font-body)",
+                          }}
+                        >
+                          <option value="REA" style={{ backgroundColor: "var(--primary-bg)" }}>REA</option>
+                          <option value="EA" style={{ backgroundColor: "var(--primary-bg)" }}>EA</option>
+                          <option value="ED1" style={{ backgroundColor: "var(--primary-bg)" }}>ED1</option>
+                          <option value="ED2" style={{ backgroundColor: "var(--primary-bg)" }}>ED2</option>
+                          <option value="RD" style={{ backgroundColor: "var(--primary-bg)" }}>RD</option>
+                          <option value="Other" style={{ backgroundColor: "var(--primary-bg)" }}>Other</option>
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <input
+                          type="date"
+                          value={deadline.date}
+                          onChange={(e) => handleDeadlineChange(index, "date", e.target.value)}
+                          required
+                          className="w-full px-3 py-2 rounded-md border-2 bg-transparent focus:outline-none focus:border-white transition-colors text-sm"
+                          style={{
+                            borderColor: "rgba(255, 255, 255, 0.2)",
+                            color: "var(--text-primary)",
+                            fontFamily: "var(--font-body)",
+                          }}
+                        />
+                      </div>
+                      {deadlines.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeDeadline(index)}
+                          className="px-3 py-2 rounded-md border-2 hover:bg-white/10 transition-colors text-sm"
+                          style={{
+                            borderColor: "rgba(239, 68, 68, 0.5)",
+                            color: "#ef4444",
+                          }}
+                        >
+                          ×
+                        </button>
+                      )}
                     </div>
-                    <div className="flex-1">
-                      <input
-                        type="date"
-                        value={deadline.date}
-                        onChange={(e) => handleDeadlineChange(index, "date", e.target.value)}
-                        required
-                        className="w-full px-3 py-2 rounded-md border-2 bg-transparent focus:outline-none focus:border-white transition-colors text-sm"
-                        style={{
-                          borderColor: "rgba(255, 255, 255, 0.2)",
-                          color: "var(--text-primary)",
-                          fontFamily: "var(--font-body)",
-                        }}
-                      />
-                    </div>
-                    {deadlines.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeDeadline(index)}
-                        className="px-3 py-2 rounded-md border-2 hover:bg-white/10 transition-colors text-sm"
-                        style={{
-                          borderColor: "rgba(239, 68, 68, 0.5)",
-                          color: "#ef4444",
-                        }}
-                      >
-                        ×
-                      </button>
+                    
+                    {deadline.type === "Other" && (
+                      <div className="pl-0">
+                        <input
+                          type="text"
+                          value={deadline.customType || ""}
+                          onChange={(e) => handleDeadlineChange(index, "customType", e.target.value)}
+                          placeholder="Enter custom deadline type (e.g., Rolling, Priority, Transfer)"
+                          required
+                          className="w-full px-3 py-2 rounded-md border-2 bg-transparent focus:outline-none focus:border-white transition-colors text-sm"
+                          style={{
+                            borderColor: "rgba(255, 255, 255, 0.2)",
+                            color: "var(--text-primary)",
+                            fontFamily: "var(--font-body)",
+                          }}
+                        />
+                      </div>
                     )}
                   </div>
                 ))}
@@ -332,6 +353,25 @@ export default function EditModal({ item, type, onClose, onSave }) {
                     <option value="Other" style={{ backgroundColor: "var(--primary-bg)" }}>Other</option>
                   </select>
                 </div>
+                
+                {/* Custom Country Input when Other is selected */}
+                {location.country === "Other" && (
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Enter country name"
+                      value={location.customCountry || ""}
+                      onChange={(e) => handleLocationChange("customCountry", e.target.value)}
+                      required
+                      className="w-full px-3 py-2 rounded-md border-2 bg-transparent focus:outline-none focus:border-white transition-colors text-sm"
+                      style={{
+                        borderColor: "rgba(255, 255, 255, 0.2)",
+                        color: "var(--text-primary)",
+                        fontFamily: "var(--font-body)",
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           ) : (

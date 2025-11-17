@@ -14,6 +14,7 @@ export default function CollegesPage() {
   const [user, setUser] = useState(null);
   const [colleges, setColleges] = useState([]);
   const [filteredColleges, setFilteredColleges] = useState([]);
+  const [availableCountries, setAvailableCountries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({
@@ -70,14 +71,17 @@ export default function CollegesPage() {
 
     if (filters.country) {
       filtered = filtered.filter(college => {
-        const country = typeof college.location === 'string'
-          ? college.location
-          : college.location?.country;
+        let country;
+        if (typeof college.location === 'string') {
+          country = college.location;
+        } else {
+          // If country is "Other", use customCountry, otherwise use country
+          country = college.location?.country === "Other" && college.location?.customCountry
+            ? college.location.customCountry
+            : college.location?.country;
+        }
         
-        const countryVariations = filters.country.split('|');
-        return countryVariations.some(variant => 
-          country?.toLowerCase().includes(variant.toLowerCase())
-        );
+        return country?.toLowerCase() === filters.country.toLowerCase();
       });
     }
 
@@ -106,6 +110,25 @@ export default function CollegesPage() {
       if (data.colleges) {
         setColleges(data.colleges);
         setFilteredColleges(data.colleges);
+        
+        // Extract unique countries from colleges
+        const countries = new Set();
+        data.colleges.forEach(college => {
+          if (college.location) {
+            let country;
+            if (typeof college.location === 'string') {
+              country = college.location;
+            } else {
+              // If country is "Other", use customCountry, otherwise use country
+              country = college.location.country === "Other" && college.location.customCountry
+                ? college.location.customCountry
+                : college.location.country;
+            }
+            if (country) countries.add(country);
+          }
+        });
+        
+        setAvailableCountries(Array.from(countries).sort());
       }
     } catch (error) {
       console.error("Error fetching colleges:", error);
@@ -226,10 +249,11 @@ export default function CollegesPage() {
               }}
             >
               <option value="">All Countries</option>
-              <option value="USA|United States">United States</option>
-              <option value="UK|United Kingdom">United Kingdom</option>
-              <option value="Canada">Canada</option>
-              <option value="Australia">Australia</option>
+              {availableCountries.map((country) => (
+                <option key={country} value={country}>
+                  {country}
+                </option>
+              ))}
             </select>
 
             <select

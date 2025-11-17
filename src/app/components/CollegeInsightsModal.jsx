@@ -409,18 +409,111 @@ export default function CollegeInsightsModal({ college, onClose }) {
 
                   {insights.collegeInfo.requirements && (
                     <div>
-                      <h4 className="font-semibold mb-1 text-sm" style={{ color: "var(--text-primary)" }}>
+                      <h4 className="font-semibold mb-3 text-sm" style={{ color: "var(--text-primary)" }}>
                         Application Requirements
                       </h4>
-                      <div 
-                        style={{ color: "var(--text-secondary)", fontSize: "14px" }}
-                        dangerouslySetInnerHTML={{
-                          __html: insights.collegeInfo.requirements.replace(
-                            /(https?:\/\/[^\s]+)/g,
-                            '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #60a5fa; text-decoration: underline; word-break: break-all;">$1</a>'
-                          )
-                        }}
-                      />
+                      {typeof insights.collegeInfo.requirements === 'object' ? (
+                        <div className="space-y-3">
+                          {insights.collegeInfo.requirements.applicationPlatform && (
+                            <div>
+                              <p className="text-xs font-semibold mb-1" style={{ color: "var(--text-primary)", opacity: 0.8 }}>
+                                Application Platform:
+                              </p>
+                              <div 
+                                style={{ color: "var(--text-secondary)", fontSize: "14px" }}
+                                dangerouslySetInnerHTML={{
+                                  __html: insights.collegeInfo.requirements.applicationPlatform.replace(
+                                    /(https?:\/\/[^\s]+)/g,
+                                    '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #60a5fa; text-decoration: underline; word-break: break-all;">$1</a>'
+                                  )
+                                }}
+                              />
+                            </div>
+                          )}
+                          {insights.collegeInfo.requirements.testRequirements && (
+                            <div>
+                              <p className="text-xs font-semibold mb-1" style={{ color: "var(--text-primary)", opacity: 0.8 }}>
+                                Test Requirements:
+                              </p>
+                              <div 
+                                style={{ color: "var(--text-secondary)", fontSize: "14px", whiteSpace: "pre-line" }}
+                                dangerouslySetInnerHTML={{
+                                  __html: insights.collegeInfo.requirements.testRequirements.replace(
+                                    /(https?:\/\/[^\s]+)/g,
+                                    '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #60a5fa; text-decoration: underline; word-break: break-all;">$1</a>'
+                                  )
+                                }}
+                              />
+                            </div>
+                          )}
+                          {insights.collegeInfo.requirements.recommendationLetters && (
+                            <div>
+                              <p className="text-xs font-semibold mb-1" style={{ color: "var(--text-primary)", opacity: 0.8 }}>
+                                Recommendation Letters:
+                              </p>
+                              <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
+                                {insights.collegeInfo.requirements.recommendationLetters}
+                              </p>
+                            </div>
+                          )}
+                          {insights.collegeInfo.requirements.transcripts && (
+                            <div>
+                              <p className="text-xs font-semibold mb-1" style={{ color: "var(--text-primary)", opacity: 0.8 }}>
+                                Transcripts:
+                              </p>
+                              <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
+                                {insights.collegeInfo.requirements.transcripts}
+                              </p>
+                            </div>
+                          )}
+                          {insights.collegeInfo.requirements.deadlines && (
+                            <div>
+                              <p className="text-xs font-semibold mb-1" style={{ color: "var(--text-primary)", opacity: 0.8 }}>
+                                Deadlines:
+                              </p>
+                              <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
+                                {insights.collegeInfo.requirements.deadlines}
+                              </p>
+                            </div>
+                          )}
+                          {insights.collegeInfo.requirements.applicationURL && (
+                            <div>
+                              <p className="text-xs font-semibold mb-1" style={{ color: "var(--text-primary)", opacity: 0.8 }}>
+                                Application URL:
+                              </p>
+                              <div 
+                                style={{ color: "var(--text-secondary)", fontSize: "14px" }}
+                                dangerouslySetInnerHTML={{
+                                  __html: insights.collegeInfo.requirements.applicationURL.replace(
+                                    /(https?:\/\/[^\s]+)/g,
+                                    '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #60a5fa; text-decoration: underline; word-break: break-all;">$1</a>'
+                                  )
+                                }}
+                              />
+                            </div>
+                          )}
+                          {insights.collegeInfo.requirements.additionalRequirements && (
+                            <div>
+                              <p className="text-xs font-semibold mb-1" style={{ color: "var(--text-primary)", opacity: 0.8 }}>
+                                Additional Requirements:
+                              </p>
+                              <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
+                                {insights.collegeInfo.requirements.additionalRequirements}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div 
+                          style={{ color: "var(--text-secondary)", fontSize: "14px" }}
+                          dangerouslySetInnerHTML={{
+                            __html: insights.collegeInfo.requirements.replace(
+                              /(https?:\/\/[^\s]+)/g,
+                              '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #60a5fa; text-decoration: underline; word-break: break-all;">$1</a>'
+                            )
+                          }}
+                        />
+                      )}
                     </div>
                   )}
                 </div>

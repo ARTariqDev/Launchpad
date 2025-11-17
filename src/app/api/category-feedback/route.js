@@ -172,11 +172,8 @@ CRITICAL: Read each activity description! Analyze:
         const regionalAwards = awards.filter(a => a.level?.toLowerCase().includes('regional') || a.level?.toLowerCase().includes('state'));
         const schoolAwards = awards.filter(a => a.level?.toLowerCase().includes('school'));
         
-        categoryData = `
-Awards and Honors (${awards.length} total):
-
-DETAILED AWARDS LIST (Analyze prestige, competitiveness, and relevance):
-${awards.length > 0 ? awards.map((award, i) => `
+        const awardsList = awards.length > 0 ? awards.map((award, i) => {
+          return `
 ${i + 1}. ${award.name || 'Unnamed award'}
    Level: ${award.level || 'Not specified'}
    Year: ${award.year || 'Not specified'}
@@ -189,7 +186,14 @@ ${i + 1}. ${award.name || 'Unnamed award'}
    - Competitiveness: (How selective is this award? How many compete?)
    - Relevance: (Does this relate to the student's intended major/interests?)
    - Significance: (Is this a well-known, prestigious recognition?)
-`).join('') : 'No awards or honors listed'}
+`;
+        }).join('') : 'No awards or honors listed';
+        
+        categoryData = `
+Awards and Honors (${awards.length} total):
+
+DETAILED AWARDS LIST (Analyze prestige, competitiveness, and relevance):
+${awardsList}
 
 Prestige Breakdown:
 - International: ${internationalAwards.length} (e.g., ${internationalAwards.map(a => a.name).slice(0, 2).join(', ') || 'none'})
@@ -197,11 +201,44 @@ Prestige Breakdown:
 - Regional/State: ${regionalAwards.length}
 - School: ${schoolAwards.length}
 
-CRITICAL: Read each award description! Analyze:
-- Is this a well-known, competitive award? (e.g., ISEF, USAMO, CERN programs)
-- Does it demonstrate exceptional achievement in the student's field?
-- How selective/competitive was it? (mention rate, pool size if apparent)
-- Does it show sustained excellence or a one-time achievement?
+⚠️ CRITICAL AWARD EVALUATION FRAMEWORK - READ CAREFULLY ⚠️
+
+MANDATORY RATING RULES - FOLLOW EXACTLY:
+
+1. IF award level = "International" → MUST rate 9-10/10 (unless clearly participation-only)
+2. IF award includes "Gold Medal" at international level → MUST be 10/10
+3. IF award includes "Medal" (any color) at international level → MUST be 9-10/10
+4. ONE international medal = MORE PRESTIGIOUS than 10 school awards combined
+
+RATING BY LEVEL (APPLY TO ANY AWARD IN ANY FIELD):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INTERNATIONAL LEVEL → 9-10/10
+  ✓ Any medal (Gold/Silver/Bronze) at international competition
+  ✓ Global top 500 in any field
+  ✓ Acceptance rate <1%
+  ✓ Winner/finalist in recognized international competition
+  Examples: Math olympiads, science competitions, research awards, debate championships
+
+NATIONAL LEVEL → 7-9/10
+  ✓ Top performer in country-wide competition
+  ✓ National team selection
+  ✓ Top 100 nationally in competitive field
+  Examples: National competitions, merit programs, national recognition
+
+REGIONAL/STATE → 5-7/10
+  ✓ Regional competition winners
+  ✓ State-level recognition
+
+SCHOOL/LOCAL → 2-4/10
+  ✓ Honor roll, school awards
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CRITICAL REMINDERS:
+❌ DO NOT rate international awards as 4/10 - this is incorrect
+❌ DO NOT penalize for "lack of quantity" if they have 1-2 elite awards
+❌ DO NOT require specific competition names - evaluate by level and selectivity
+✓ DO recognize that international medals are EXCEPTIONAL achievements
+✓ DO understand that one international gold medal > 100 school awards
 `;
         break;
         
@@ -382,12 +419,19 @@ For essays: READ THE ACTUAL ESSAY TEXT PROVIDED! Analyze:
       throw new Error('OpenAI API key not configured');
     }
 
-    console.log(`Generating feedback for category: ${category}`);
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`CATEGORY FEEDBACK - ${category.toUpperCase()}`);
+    console.log('='.repeat(80));
+    console.log('Current Score:', currentScore);
+    console.log('\nPrompt being sent:');
+    console.log('-'.repeat(80));
+    console.log(prompt);
+    console.log('='.repeat(80));
     
     const openai = new OpenAI({ apiKey });
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",

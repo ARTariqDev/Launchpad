@@ -272,7 +272,7 @@ export default function ManageTab({ type }) {
                         }}
                       >
                         {type === "universities" && item.location 
-                          ? `${item.location.city}, ${item.location.state}, ${item.location.country}`
+                          ? `${item.location.city}, ${item.location.state}, ${item.location.country === "Other" && item.location.customCountry ? item.location.customCountry : item.location.country}`
                           : item.description}
                       </p>
                     </div>
@@ -285,7 +285,7 @@ export default function ManageTab({ type }) {
                       item.deadlines.map((dl, idx) => (
                         <div key={idx} className="flex items-center gap-1 px-2 py-1 rounded" style={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}>
                           <span style={{ color: "var(--text-secondary)", fontSize: "11px", fontFamily: "var(--font-display)", fontWeight: "bold" }}>
-                            {dl.type}
+                            {dl.type === "Other" && dl.customType ? dl.customType : dl.type}
                           </span>
                           <span style={{ color: "var(--text-subtle)", fontSize: "11px" }}>
                             {new Date(dl.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}

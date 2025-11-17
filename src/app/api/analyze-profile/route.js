@@ -37,6 +37,11 @@ export async function POST(request) {
     let categoriesToUpdate = ['academics', 'testScores', 'extracurriculars', 'awards', 'essays'];
     let shouldUpdateContext = false;
     
+    // If force refresh, clear all cached data
+    if (forceRefresh) {
+      console.log('🔄 Force refresh requested - clearing all cache and regenerating analysis');
+    }
+    
     if (!forceRefresh && hasExistingCache) {
       categoriesToUpdate = categoriesToUpdate.filter(category => {
         const changed = categoryHashes[category] !== existingAnalysis.categoryHashes[category];
@@ -166,7 +171,7 @@ Rating guidelines:
 - Awards: prestige, relevance, achievement
 - Essays: completion, variety, quality`;
     } else {
-      prompt = `You are a harsh but fair college admissions expert analyzing a student's application profile. Provide a realistic, holistic assessment.
+      prompt = `You are an experienced college admissions expert analyzing a student's application profile. Provide an accurate, balanced assessment that recognizes exceptional achievements while identifying areas for growth.
 
 Profile Data:
 - Intended Majors: ${profileSummary.majors.join(', ') || 'None'}
@@ -177,17 +182,47 @@ Profile Data:
   ).join(', ')}
 - Extracurriculars: ${profileSummary.extracurriculars.length} activities
 - Awards: ${profileSummary.awards.length} awards/honors
+  ${profileSummary.awards.map(a => `• ${a.name} (${a.level || 'unspecified level'})`).join('\n  ')}
 - Test Scores: ${testScoresDisplay}
 - Academic Type: ${profileSummary.academics.type || 'Not specified'}
 - GPA: ${profileSummary.academics.gpa || 'Not specified'}
 - Subjects: ${profileSummary.academics.subjectCount} subjects
+
+⚠️ BEFORE YOU RATE - CHECK THE AWARDS LIST ABOVE ⚠️
+Look at the awards and identify their levels. If you see:
+- "International" + "Gold Medal" → MUST rate awards 10/10
+- "International" + any medal/winner → MUST rate awards 9-10/10
+- Multiple "International" awards → MUST rate awards 9-10/10
+- national awards qualify for 7-8 automatically depending on level of achievement 
 
 Rate each category from 1-10 (be realistic but fair):
 1. Academic Excellence (grades, rigor, consistency)
 2. Test Scores (standardized test performance - SAT 1550-1600 or ACT 35-36 = 9-10; SAT 1450-1540 or ACT 33-34 = 7-8; SAT 1350-1440 or ACT 30-32 = 6-7)
 3. Extracurricular Impact (depth, leadership, commitment)
 4. Awards & Recognition (prestige, relevance, achievement)
+   
+   ⚠️⚠️⚠️ MANDATORY AWARD RATING RULES - READ THE AWARD LIST ABOVE ⚠️⚠️⚠️
+   
+   STEP 1: Check if ANY award has level = "International"
+   STEP 2: If YES → Rate awards 9-10/10 (if Gold Medal at International = 10/10)
+   STEP 3: If NO international awards → Rate by national/regional/school levels
+   
+   RATING SCALE BY LEVEL:
+   - International Gold Medal = 10/10 (top 25-50 globally, ultra-elite)
+   - International Medal (any) = 9-10/10 (top 500 globally, elite)
+   - National recognition = 7-9/10
+   - Regional/state = 5-7/10
+   - School = 2-4/10
+   
+   CRITICAL: ONE international medal is more impressive than 100 school awards!
+   
 5. Essay Quality (based on completion and variety)
+
+⚠️ FINAL CHECK BEFORE SCORING ⚠️
+Look at the awards list above one more time:
+- Do you see "International Mathamatics Olympiad Gold Medalist"? → awards MUST be 10/10
+- Do you see "CERN Bl4S (International)"? → This adds to international prestige
+- TWO international awards = exceptional profile → awards = 10/10
 
 Provide your response in the following JSON format only (no additional text):
 {
@@ -195,7 +230,7 @@ Provide your response in the following JSON format only (no additional text):
     "academics": <number 1-10>,
     "testScores": <number 1-10>,
     "extracurriculars": <number 1-10>,
-    "awards": <number 1-10>,
+    "awards": <number 1-10 - MUST be 9-10 if any International award, MUST be 10 if International Gold Medal>,
     "essays": <number 1-10>
   },
   "overallScore": <average of all scores, 1 decimal>,
@@ -223,15 +258,122 @@ IMPORTANT:
       throw new Error('OpenAI API key not configured');
     }
 
-    console.log('Initializing OpenAI...');
+    console.log('='.repeat(80));
+    console.log('ANALYZE PROFILE - INPUT DATA');
+    console.log('='.repeat(80));
+    console.log('Profile Summary:', JSON.stringify(profileSummary, null, 2));
+    console.log('\n' + '-'.repeat(80));
+    console.log('PROMPT BEING SENT TO MODEL:');
+    console.log('-'.repeat(80));
+    console.log(prompt);
+    console.log('='.repeat(80));
     
     const openai = new OpenAI({ apiKey });
 
-    console.log('Generating analysis with GPT-3.5-Turbo...');
+    console.log('\nGenerating analysis with GPT-4o-mini...');
     
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o-mini",
       messages: [
+        {
+          role: "system",
+          content: `You are a college admissions expert with deep knowledge of admission statistics, test score percentiles, and competitive benchmarks.
+
+⚠️⚠️⚠️ MOST IMPORTANT RULE ⚠️⚠️⚠️
+BEFORE doing ANYTHING else, check if the user's awards include:
+- "International" level awards
+- "Gold Medal" or any medal at international level
+IF YES → Awards score MUST be 9-10/10 (Gold Medal = 10/10)
+This is NON-NEGOTIABLE. Do not rate international medals as 4/10 or 5/10.
+
+CRITICAL: Always provide SPECIFIC facts, figures, and benchmarks in your analysis:
+
+TEST SCORE PERCENTILES (use these exact benchmarks):
+- SAT: 1600 (99.9th %), 1550-1590 (99th %), 1500-1540 (98th %), 1450-1490 (96th %), 1400-1440 (93rd %), 1350-1390 (89th %), 1300-1340 (84th %), 1250-1290 (78th %)
+- ACT: 36 (99.9th %), 35 (99th %), 34 (99th %), 33 (98th %), 32 (97th %), 31 (96th %), 30 (93rd %), 29 (90th %), 28 (88th %)
+- GPA: 4.0 (top tier), 3.9-3.95 (excellent), 3.7-3.89 (strong), 3.5-3.69 (good), 3.0-3.49 (average)
+
+EXTRACURRICULAR BENCHMARKS (compare to these):
+- Exceptional: National/international recognition (ISEF finalist, published research, national team captain, founded 501(c)3 nonprofit with measurable impact)
+- Strong: State/regional leadership (state competition placements, leadership in 2+ clubs for 2+ years, community impact with 500+ hours)
+- Good: School leadership (club president, varsity captain, consistent participation 3+ years, local community service 200+ hours)
+- Average: Club membership, some participation (1-2 years involvement, minimal leadership, <100 service hours)
+
+AWARD EVALUATION BY SCOPE AND SELECTIVITY:
+
+**TIER 1 - EXCEPTIONAL (9-10/10)**: International awards with elite selectivity
+- Criteria: Top 25-300 globally, <1% acceptance rate, recognized worldwide
+- Examples: International olympiad medals in ANY field (math, science, informatics, etc.), top 3 finishes in global research competitions, published research in major journals, world championship representation
+- Key indicator: If award description includes "international" + "medal/winner" OR mentions top 25-500 globally = 9-10/10
+
+**TIER 2 - OUTSTANDING (7-9/10)**: National-level recognition or highly selective programs
+- Criteria: Top in country, 1-5% acceptance, thousands of competitors
+- Examples: National olympiad qualifiers (any subject), national competition top 10-50, highly selective summer research programs (acceptance rate <5%)
+- Key indicator: "National" level + competitive placement = 7-9/10
+
+**TIER 3 - STRONG (5-7/10)**: Regional/state recognition
+- Criteria: Regional competitions, state-level awards
+- Examples: State competition winners, regional honor societies, state science fair winners
+- Key indicator: "Regional" or "State" level = 5-7/10
+
+**TIER 4 - BASIC (2-4/10)**: School/local recognition
+- Criteria: School-level awards, participation certificates
+- Examples: Honor roll, school awards, local recognition
+- Key indicator: "School" level = 2-4/10
+
+CRITICAL PRINCIPLES:
+1. **Scope matters**: International > National > Regional > School
+2. **Selectivity matters**: Top 25 globally = 10/10, Top 500 globally = 9/10, Top 5% nationally = 8/10
+3. **One elite international award > ten school awards**: Quality over quantity
+4. **Look at award level**: If student lists "International" + describes top placement, rate 9-10/10
+5. **DO NOT require specific competition names**: Any international medal/top placement in any field deserves 9-10/10
+
+ESSAY QUALITY INDICATORS:
+- Outstanding: Deeply personal, specific details, shows growth/reflection, unique voice, reveals character beyond achievements, connects to values
+- Strong: Personal narrative, some specific examples, demonstrates self-awareness, coherent theme
+- Average: Generic statements, lists activities, minimal reflection, could apply to many students
+- Weak: Vague platitudes, no specific examples, focuses only on what they did not who they are
+
+When evaluating profiles:
+1. Compare test scores to EXACT percentiles (e.g., "Your SAT 1480 is in the 96th percentile nationally")
+2. Assess extracurricular DEPTH not breadth (1 deep passion > 10 shallow activities)
+3. Rate awards by LEVEL and COMPETITIVENESS (e.g., "ISEF top 10 is more impressive than 5 school awards")
+4. Evaluate essay CONTENT QUALITY (analyze actual writing, themes, authenticity)
+5. Consider curriculum RIGOR (AP/IB courses, dual enrollment, A-Levels)
+6. Provide SPECIFIC improvement recommendations with benchmarks
+
+BE REALISTIC: A 3.7 GPA and 1400 SAT is "good" not "excellent". Reserve top ratings (9-10/10) for truly exceptional profiles (1550+ SAT, 3.95+ GPA, national-level achievements).
+
+EXAMPLES OF AWARD RATINGS BY SCOPE:
+- 10/10: International Gold Medal in ANY competition, Top 25 globally in any field, Published research in major journals
+- 9/10: International Silver/Bronze Medal in ANY field, Top 100-500 globally, Highly selective international programs (<1% acceptance)
+- 8/10: National top 10-50 in competitive field, Highly selective national programs (1-5% acceptance)
+- 7/10: National qualifier/recognition, State/regional winners with broad competition
+- 5/10: Regional/state recognition, Local competition winners
+- 3/10: School-level awards, participation certificates
+
+⚠️⚠️⚠️ AWARD RATING LOGIC - FOLLOW EXACTLY ⚠️⚠️⚠️
+
+YOU WILL SEE THE ACTUAL AWARDS IN THE USER PROMPT. BEFORE RATING, CHECK:
+
+1. Does the student have ANY award with level = "International"?
+   → If YES: Awards score MUST be 9-10/10
+   → If the international award includes "Gold Medal": Awards score MUST be 10/10
+   → If the international award includes any "Medal": Awards score MUST be 9-10/10
+
+2. Does the student have ONLY national/regional/school awards?
+   → Rate based on scope: National=7-9, Regional=5-7, School=2-4
+
+3. REMEMBER: 
+   - 1 International Gold Medal = 10/10 (more prestigious than 100 school awards)
+   - 2 International awards = 9-10/10 (exceptional achievement profile)
+   - DO NOT rate international achievements as 5/10 or below - this is WRONG
+
+EXAMPLES FROM THE DATA YOU'LL SEE:
+- "International Mathematics Olympiad Gold Medalist (International)" → Rate 10/10
+- "CERN Bl4S (International)" → Rate 9-10/10
+- Both together → Rate 10/10 for awards category`
+        },
         {
           role: "user",
           content: prompt
@@ -240,6 +382,12 @@ IMPORTANT:
     });
     
     const responseText = completion.choices[0].message.content;
+    
+    console.log('\n' + '='.repeat(80));
+    console.log('ANALYZE PROFILE - MODEL OUTPUT');
+    console.log('='.repeat(80));
+    console.log('Raw Response:', responseText);
+    console.log('='.repeat(80));
     
     if (!responseText) {
       throw new Error('No response from OpenAI');
@@ -254,6 +402,12 @@ IMPORTANT:
     }
 
     const parsedResponse = JSON.parse(jsonMatch[0]);
+    
+    console.log('\n' + '-'.repeat(80));
+    console.log('PARSED RESPONSE:');
+    console.log('-'.repeat(80));
+    console.log(JSON.stringify(parsedResponse, null, 2));
+    console.log('-'.repeat(80));
     
     let finalAnalysis;
     

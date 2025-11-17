@@ -20,13 +20,14 @@ import {
 import Navbar from "../components/Navbar";
 import Button from "../components/Button";
 import ProfileInsights from "../components/ProfileInsights";
+import Toast from "../components/Toast";
 
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState("");
+  const [toast, setToast] = useState(null);
   const [activeCard, setActiveCard] = useState(null);
   
   const [profile, setProfile] = useState({
@@ -126,7 +127,7 @@ export default function Dashboard() {
 
   const saveProfile = async () => {
     setSaving(true);
-    setSaveMessage("");
+    setToast(null);
     try {
       const response = await fetch("/api/profile", {
         method: "PUT",
@@ -135,14 +136,22 @@ export default function Dashboard() {
       });
 
       if (response.ok) {
-        setSaveMessage("Profile saved successfully!");
-        setTimeout(() => setSaveMessage(""), 3000);
+        setToast({
+          message: "Profile saved successfully!",
+          type: "success"
+        });
       } else {
-        setSaveMessage("Failed to save profile");
+        setToast({
+          message: "Failed to save profile",
+          type: "error"
+        });
       }
     } catch (error) {
       console.error("Save profile error:", error);
-      setSaveMessage("Error saving profile");
+      setToast({
+        message: "Error saving profile",
+        type: "error"
+      });
     } finally {
       setSaving(false);
     }
@@ -463,24 +472,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Save Message */}
-        {saveMessage && (
-          <div
-            className="mb-6 px-4 py-3 rounded-lg border-2 animate-fade-in"
-            style={{
-              backgroundColor: saveMessage.includes("successfully") 
-                ? "rgba(34, 197, 94, 0.1)" 
-                : "rgba(239, 68, 68, 0.1)",
-              borderColor: saveMessage.includes("successfully")
-                ? "rgba(34, 197, 94, 0.5)"
-                : "rgba(239, 68, 68, 0.5)",
-              color: saveMessage.includes("successfully") ? "#22c55e" : "#ef4444",
-            }}
-          >
-            {saveMessage}
-          </div>
-        )}
-
         {/* Card Grid or Active Card */}
         {!activeCard ? (
           <>
@@ -625,6 +616,14 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }
