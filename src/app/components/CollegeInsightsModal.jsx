@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimes, faSpinner, faCheckCircle, faExclamationCircle } from "@fortawesome/free-solid-svg-icons";
 
@@ -9,7 +9,7 @@ export default function CollegeInsightsModal({ college, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchInsights = async (forceRefresh = false) => {
+  const fetchInsights = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
 
@@ -36,11 +36,11 @@ export default function CollegeInsightsModal({ college, onClose }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [college._id]);
 
   useEffect(() => {
     fetchInsights();
-  }, [college._id]);
+  }, [college._id, fetchInsights]);
 
   const getScoreColor = (score) => {
     if (score >= 8) return "#10b981";
@@ -185,6 +185,100 @@ export default function CollegeInsightsModal({ college, onClose }) {
                 <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
                   {insights.efcComparison}
                 </p>
+              </div>
+            )}
+
+            {insights.comparisonToAdmits && (
+              <div
+                className="border-2 rounded-lg p-6"
+                style={{ borderColor: "rgba(255, 255, 255, 0.2)", backgroundColor: "rgba(0, 0, 0, 0.3)" }}
+              >
+                <h3
+                  className="font-bold mb-4 text-lg"
+                  style={{ color: "var(--text-primary)", fontFamily: "var(--font-display)" }}
+                >
+                  How You Compare to Admitted Students
+                </h3>
+
+                <div className="space-y-4">
+                  {insights.comparisonToAdmits.testScores && (
+                    <div>
+                      <h4 className="font-semibold mb-2 text-sm" style={{ color: "var(--text-primary)" }}>
+                        Test Scores
+                      </h4>
+                      <div style={{ color: "var(--text-secondary)", fontSize: "14px", whiteSpace: "pre-wrap" }}>
+                        {typeof insights.comparisonToAdmits.testScores === 'string' 
+                          ? insights.comparisonToAdmits.testScores 
+                          : JSON.stringify(insights.comparisonToAdmits.testScores)}
+                      </div>
+                    </div>
+                  )}
+
+                  {insights.comparisonToAdmits.academics && (
+                    <div>
+                      <h4 className="font-semibold mb-2 text-sm" style={{ color: "var(--text-primary)" }}>
+                        Academic Performance
+                      </h4>
+                      <div style={{ color: "var(--text-secondary)", fontSize: "14px", whiteSpace: "pre-wrap" }}>
+                        {typeof insights.comparisonToAdmits.academics === 'string' 
+                          ? insights.comparisonToAdmits.academics 
+                          : JSON.stringify(insights.comparisonToAdmits.academics)}
+                      </div>
+                    </div>
+                  )}
+
+                  {insights.comparisonToAdmits.extracurriculars && (
+                    <div>
+                      <h4 className="font-semibold mb-2 text-sm" style={{ color: "var(--text-primary)" }}>
+                        Extracurriculars
+                      </h4>
+                      <div style={{ color: "var(--text-secondary)", fontSize: "14px", whiteSpace: "pre-wrap" }}>
+                        {typeof insights.comparisonToAdmits.extracurriculars === 'string' 
+                          ? insights.comparisonToAdmits.extracurriculars 
+                          : JSON.stringify(insights.comparisonToAdmits.extracurriculars)}
+                      </div>
+                    </div>
+                  )}
+
+                  {insights.comparisonToAdmits.essays && (
+                    <div>
+                      <h4 className="font-semibold mb-2 text-sm" style={{ color: "var(--text-primary)" }}>
+                        Essays
+                      </h4>
+                      <div style={{ color: "var(--text-secondary)", fontSize: "14px", whiteSpace: "pre-wrap" }}>
+                        {typeof insights.comparisonToAdmits.essays === 'string' 
+                          ? insights.comparisonToAdmits.essays 
+                          : JSON.stringify(insights.comparisonToAdmits.essays)}
+                      </div>
+                    </div>
+                  )}
+
+                  {insights.comparisonToAdmits.awards && (
+                    <div>
+                      <h4 className="font-semibold mb-2 text-sm" style={{ color: "var(--text-primary)" }}>
+                        Awards & Recognition
+                      </h4>
+                      <div style={{ color: "var(--text-secondary)", fontSize: "14px", whiteSpace: "pre-wrap" }}>
+                        {typeof insights.comparisonToAdmits.awards === 'string' 
+                          ? insights.comparisonToAdmits.awards 
+                          : JSON.stringify(insights.comparisonToAdmits.awards)}
+                      </div>
+                    </div>
+                  )}
+
+                  {insights.comparisonToAdmits.financialNeed && (
+                    <div>
+                      <h4 className="font-semibold mb-2 text-sm" style={{ color: "var(--text-primary)" }}>
+                        Financial Aid Match
+                      </h4>
+                      <div style={{ color: "var(--text-secondary)", fontSize: "14px", whiteSpace: "pre-wrap" }}>
+                        {typeof insights.comparisonToAdmits.financialNeed === 'string' 
+                          ? insights.comparisonToAdmits.financialNeed 
+                          : JSON.stringify(insights.comparisonToAdmits.financialNeed)}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
