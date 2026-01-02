@@ -6,7 +6,14 @@ import { getSession } from '@/lib/auth';
 export async function GET() {
   try {
     const extracurriculars = await Extracurricular.findAll();
-    return NextResponse.json({ extracurriculars });
+    return NextResponse.json(
+      { extracurriculars },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600'
+        }
+      }
+    );
   } catch (error) {
     console.error('Get extracurriculars error:', error);
     return NextResponse.json(

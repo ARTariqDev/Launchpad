@@ -33,7 +33,7 @@ const Button = ({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     const id = Date.now();
-    onClick && onClick();
+    onClick && onClick(e);
 
     setRipples((prev) => [...prev, { id, x, y }]);
     setTimeout(() => {

@@ -6,7 +6,14 @@ import { getSession } from '@/lib/auth';
 export async function GET() {
   try {
     const scholarships = await Scholarship.findAll();
-    return NextResponse.json({ scholarships });
+    return NextResponse.json(
+      { scholarships },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600'
+        }
+      }
+    );
   } catch (error) {
     console.error('Get scholarships error:', error);
     return NextResponse.json(

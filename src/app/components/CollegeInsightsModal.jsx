@@ -9,6 +9,10 @@ export default function CollegeInsightsModal({ college, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Debug: Log the college object to see what data it contains
+  console.log('CollegeInsightsModal - college object:', college);
+  console.log('CollegeInsightsModal - adminNotes:', college?.adminNotes);
+
   const fetchInsights = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
@@ -24,6 +28,18 @@ export default function CollegeInsightsModal({ college, onClose }) {
       });
 
       const data = await response.json();
+
+      console.log('\n' + '='.repeat(80));
+      console.log('COLLEGE INSIGHTS MODAL - RECEIVED DATA');
+      console.log('='.repeat(80));
+      console.log('College:', college.name);
+      console.log('Success:', data.success);
+      console.log('Cached:', data.cached);
+      console.log('Insights keys:', data.insights ? Object.keys(data.insights) : 'null');
+      console.log('fitScore:', data.insights?.fitScore);
+      console.log('fitSummary:', data.insights?.fitSummary);
+      console.log('Full insights object:', JSON.stringify(data.insights, null, 2));
+      console.log('='.repeat(80) + '\n');
 
       if (data.success) {
         setInsights(data.insights);
@@ -122,6 +138,38 @@ export default function CollegeInsightsModal({ college, onClose }) {
 
         {!loading && !error && insights && (
           <div className="space-y-6">
+            {/* Admin Notes Section - Moved to top */}
+            {college.adminNotes && college.adminNotes.trim() !== '' && (
+              <div
+                className="border-2 rounded-lg p-6"
+                style={{ borderColor: "rgba(255, 255, 255, 0.2)", backgroundColor: "rgba(0, 0, 0, 0.3)" }}
+              >
+                <h3
+                  className="font-bold mb-2 text-lg"
+                  style={{ color: "var(--text-primary)", fontFamily: "var(--font-display)" }}
+                >
+                  Admin Notes
+                </h3>
+                <p className="mb-3 text-xs" style={{ color: "var(--text-subtle)", fontFamily: "var(--font-body)" }}>
+                  Additional information and resources curated by our admissions team.
+                </p>
+                <div 
+                  style={{ 
+                    color: "var(--text-secondary)", 
+                    fontSize: "14px",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word"
+                  }}
+                  dangerouslySetInnerHTML={{
+                    __html: college.adminNotes.replace(
+                      /(https?:\/\/[^\s]+)/g,
+                      '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #60a5fa; text-decoration: underline; word-break: break-all;">$1</a>'
+                    )
+                  }}
+                />
+              </div>
+            )}
+
             <div
               className="border-2 rounded-lg p-6"
               style={{ borderColor: "rgba(255, 255, 255, 0.2)", backgroundColor: "rgba(0, 0, 0, 0.3)" }}

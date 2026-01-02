@@ -20,8 +20,17 @@ export default function ProfileInsights({ profile }) {
   const [categoryFeedback, setCategoryFeedback] = useState(null);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [updateMessage, setUpdateMessage] = useState('');
+  const [abortController, setAbortController] = useState(null);
 
   const analyzeProfile = async (forceRefresh = false) => {
+    // Cancel any ongoing request
+    if (abortController) {
+      abortController.abort();
+    }
+
+    const controller = new AbortController();
+    setAbortController(controller);
+
     setLoading(true);
     setError(null);
     setUpdateMessage('');
@@ -32,7 +41,8 @@ export default function ProfileInsights({ profile }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ profile, forceRefresh })
+        body: JSON.stringify({ profile, forceRefresh }),
+        signal: controller.signal
       });
 
       const data = await response.json();
@@ -188,7 +198,7 @@ export default function ProfileInsights({ profile }) {
         </div>
         <p style={{ color: "var(--text-secondary)" }}>{error}</p>
         <button
-          onClick={analyzeProfile}
+          onClick={() => analyzeProfile()}
           className="mt-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition-colors"
           style={{ color: "var(--text-primary)" }}
         >

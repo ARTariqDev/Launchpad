@@ -31,6 +31,7 @@ export async function POST(request) {
     const deadlinesJson = formData.get('deadlines');
     const locationJson = formData.get('location');
     const thumbnailFile = formData.get('thumbnail');
+    const adminNotes = formData.get('adminNotes') || '';
 
     let deadlines = [];
     if (deadlinesJson) {
@@ -88,7 +89,8 @@ export async function POST(request) {
       name,
       deadlines,
       location,
-      thumbnail: thumbnailData
+      thumbnail: thumbnailData,
+      adminNotes
     });
 
     return NextResponse.json({

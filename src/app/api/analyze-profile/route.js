@@ -181,19 +181,13 @@ Profile Data:
     `${e.title} (${e.isComplete ? e.charCount || e.wordCount : 0}/${e.maxCount} ${e.charCount ? 'characters' : 'words'}${e.sectionsCount > 0 ? `, ${e.sectionsCount} sections` : ''})`
   ).join(', ')}
 - Extracurriculars: ${profileSummary.extracurriculars.length} activities
+  ${profileSummary.extracurriculars.map(e => `• ${e.name} - ${e.role}`).join('\n  ')}
 - Awards: ${profileSummary.awards.length} awards/honors
-  ${profileSummary.awards.map(a => `• ${a.name} (${a.level || 'unspecified level'})`).join('\n  ')}
+  ${profileSummary.awards.length > 0 ? profileSummary.awards.map(a => `• ${a.name} (Level: ${a.level || 'School/Local'})`).join('\n  ') : '• No awards listed yet'}
 - Test Scores: ${testScoresDisplay}
 - Academic Type: ${profileSummary.academics.type || 'Not specified'}
 - GPA: ${profileSummary.academics.gpa || 'Not specified'}
 - Subjects: ${profileSummary.academics.subjectCount} subjects
-
-⚠️ BEFORE YOU RATE - CHECK THE AWARDS LIST ABOVE ⚠️
-Look at the awards and identify their levels. If you see:
-- "International" + "Gold Medal" → MUST rate awards 10/10
-- "International" + any medal/winner → MUST rate awards 9-10/10
-- Multiple "International" awards → MUST rate awards 9-10/10
-- national awards qualify for 7-8 automatically depending on level of achievement 
 
 Rate each category from 1-10 (be realistic but fair):
 1. Academic Excellence (grades, rigor, consistency)
@@ -201,28 +195,46 @@ Rate each category from 1-10 (be realistic but fair):
 3. Extracurricular Impact (depth, leadership, commitment)
 4. Awards & Recognition (prestige, relevance, achievement)
    
-   ⚠️⚠️⚠️ MANDATORY AWARD RATING RULES - READ THE AWARD LIST ABOVE ⚠️⚠️⚠️
+   ⚠️⚠️⚠️ REALISTIC AWARD RATING RULES - BE ACCURATE ⚠️⚠️⚠️
    
-   STEP 1: Check if ANY award has level = "International"
-   STEP 2: If YES → Rate awards 9-10/10 (if Gold Medal at International = 10/10)
-   STEP 3: If NO international awards → Rate by national/regional/school levels
+   ULTRA-ELITE (10/10):
+   - IMO/IPhO/IChO Gold Medal (top 50 globally)
+   - ISEF Grand Award Winner
+   - International Science Olympiad Gold Medal
+   - Published research in major peer-reviewed journal
    
-   RATING SCALE BY LEVEL:
-   - International Gold Medal = 10/10 (top 25-50 globally, ultra-elite)
-   - International Medal (any) = 9-10/10 (top 500 globally, elite)
-   - National recognition = 7-9/10
-   - Regional/state = 5-7/10
-   - School = 2-4/10
+   ELITE (8-9/10):
+   - IMO/IPhO/IChO Silver/Bronze
+   - CERN programs (Beamline for Schools, etc.)
+   - Top 50 globally in major international competitions
+   - Regeneron/STS Finalist
+   - Published research in student journal
+   - Multiple strong international competition placements
    
-   CRITICAL: ONE international medal is more impressive than 100 school awards!
+   STRONG (7-8/10):
+   - Top 100-300 in international hackathons/competitions
+   - National Olympiad medals
+   - Multiple international competition participation
+   - Regional/state-level significant awards
+   
+   GOOD (5-7/10):
+   - Regional competition wins
+   - School-level awards with some external recognition
+   - Multiple smaller competition placements
+   
+   AVERAGE (3-5/10):
+   - School-level awards only
+   - Participation certificates
+   
+   WEAK (1-3/10):
+   - Few or no awards
+   
+   Examples:
+   - CERN Bl4S + top 25 global hackathon + API winner = 8/10 (strong international but not Olympic level)
+   - Single hackathon win + school awards = 6/10
+   - IMO Gold Medal = 10/10
    
 5. Essay Quality (based on completion and variety)
-
-⚠️ FINAL CHECK BEFORE SCORING ⚠️
-Look at the awards list above one more time:
-- Do you see "International Mathamatics Olympiad Gold Medalist"? → awards MUST be 10/10
-- Do you see "CERN Bl4S (International)"? → This adds to international prestige
-- TWO international awards = exceptional profile → awards = 10/10
 
 Provide your response in the following JSON format only (no additional text):
 {
@@ -230,7 +242,7 @@ Provide your response in the following JSON format only (no additional text):
     "academics": <number 1-10>,
     "testScores": <number 1-10>,
     "extracurriculars": <number 1-10>,
-    "awards": <number 1-10 - MUST be 9-10 if any International award, MUST be 10 if International Gold Medal>,
+    "awards": <number 1-10 - Be realistic: CERN + hackathons = 7-8, not 10. IMO Gold = 10>,
     "essays": <number 1-10>
   },
   "overallScore": <average of all scores, 1 decimal>,
@@ -274,6 +286,8 @@ IMPORTANT:
     
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
+      temperature: 0.5,
+      max_tokens: 800,
       messages: [
         {
           role: "system",

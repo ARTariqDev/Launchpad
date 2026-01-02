@@ -9,7 +9,7 @@ export class University {
     return db.collection(UNIVERSITIES_COLLECTION);
   }
 
-  static async create({ name, deadlines, location, thumbnail }) {
+  static async create({ name, deadlines, location, thumbnail, adminNotes }) {
     const collection = await this.getCollection();
     
     const university = {
@@ -17,6 +17,7 @@ export class University {
       deadlines: deadlines || [], // Array of { type: 'REA'|'EA'|'ED1'|'ED2'|'RD', date: 'YYYY-MM-DD' }
       location: location || { city: '', state: '', country: '' }, // { city, state, country }
       thumbnail: thumbnail || null,
+      adminNotes: adminNotes || '', // Admin notes for college
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -27,7 +28,11 @@ export class University {
 
   static async findAll() {
     const collection = await this.getCollection();
-    return await collection.find({}).sort({ createdAt: -1 }).toArray();
+    return await collection
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(200) // Limit results to prevent huge payloads
+      .toArray();
   }
 
   static async findById(id) {

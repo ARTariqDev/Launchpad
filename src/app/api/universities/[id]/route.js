@@ -41,9 +41,11 @@ export async function PUT(request, { params }) {
     const deadlinesJson = formData.get('deadlines');
     const locationJson = formData.get('location');
     const thumbnailFile = formData.get('thumbnail');
+    const adminNotes = formData.get('adminNotes');
 
     const updates = {};
     if (name) updates.name = name;
+    if (adminNotes !== null) updates.adminNotes = adminNotes;
     
     if (locationJson) {
       try {

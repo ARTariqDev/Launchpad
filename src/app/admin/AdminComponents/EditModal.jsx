@@ -11,6 +11,7 @@ export default function EditModal({ item, type, onClose, onSave }) {
     deadline: item?.deadline || "",
     description: item?.description || "",
     thumbnail: null,
+    adminNotes: item?.adminNotes || "",
   });
   const [deadlines, setDeadlines] = useState(
     item?.deadlines && item.deadlines.length > 0 
@@ -52,7 +53,7 @@ export default function EditModal({ item, type, onClose, onSave }) {
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     const updatedItem = { 
       ...item, 
       ...formData 
@@ -400,6 +401,40 @@ export default function EditModal({ item, type, onClose, onSave }) {
                   color: "var(--text-primary)",
                   fontFamily: "var(--font-body)",
                   minHeight: "80px",
+                }}
+              />
+            </div>
+          )}
+
+          {type === "universities" && (
+            <div>
+              <label
+                htmlFor="adminNotes"
+                className="block mb-2 sm:mb-3 font-bold"
+                style={{
+                  color: "var(--text-primary)",
+                  fontSize: "13px",
+                  fontFamily: "var(--font-display)",
+                }}
+              >
+                Admin Notes
+              </label>
+              <p className="mb-2" style={{ color: "var(--text-subtle)", fontSize: "11px", fontFamily: "var(--font-body)" }}>
+                Add any additional information about this college that may be helpful (e.g., special programs, important contacts, application tips, links to resources). Links will be automatically formatted and made clickable.
+              </p>
+              <textarea
+                id="adminNotes"
+                name="adminNotes"
+                value={formData.adminNotes}
+                onChange={handleChange}
+                rows="4"
+                placeholder="Enter admin notes... (URLs will be automatically converted to clickable links)"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 rounded-md border-2 bg-transparent focus:outline-none focus:border-white transition-colors resize-y text-sm sm:text-base"
+                style={{
+                  borderColor: "rgba(255, 255, 255, 0.2)",
+                  color: "var(--text-primary)",
+                  fontFamily: "var(--font-body)",
+                  minHeight: "100px",
                 }}
               />
             </div>

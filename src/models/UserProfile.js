@@ -17,6 +17,9 @@ export class UserProfile {
   static async createOrUpdate(userId, profileData) {
     const collection = await this.getCollection();
     
+    // Get existing profile to preserve lists that aren't being updated
+    const existingProfile = await this.findByUserId(userId);
+    
     const profile = {
       userId,
       major: profileData.major || '',
@@ -46,12 +49,13 @@ export class UserProfile {
         academics: false
       },
       profileAnalysis: profileData.profileAnalysis || null,
-      savedColleges: profileData.savedColleges || [],
-      savedScholarships: profileData.savedScholarships || [],
-      savedExtracurriculars: profileData.savedExtracurriculars || [],
-      completedColleges: profileData.completedColleges || [],
-      completedScholarships: profileData.completedScholarships || [],
-      completedExtracurriculars: profileData.completedExtracurriculars || [],
+      // Preserve existing saved/completed lists if not explicitly provided
+      savedColleges: profileData.savedColleges !== undefined ? profileData.savedColleges : (existingProfile?.savedColleges || []),
+      savedScholarships: profileData.savedScholarships !== undefined ? profileData.savedScholarships : (existingProfile?.savedScholarships || []),
+      savedExtracurriculars: profileData.savedExtracurriculars !== undefined ? profileData.savedExtracurriculars : (existingProfile?.savedExtracurriculars || []),
+      completedColleges: profileData.completedColleges !== undefined ? profileData.completedColleges : (existingProfile?.completedColleges || []),
+      completedScholarships: profileData.completedScholarships !== undefined ? profileData.completedScholarships : (existingProfile?.completedScholarships || []),
+      completedExtracurriculars: profileData.completedExtracurriculars !== undefined ? profileData.completedExtracurriculars : (existingProfile?.completedExtracurriculars || []),
       collegeInsights: profileData.collegeInsights || [],
       updatedAt: new Date()
     };

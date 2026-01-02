@@ -1,36 +1,37 @@
 import clientPromise from '../lib/mongodb';
 
-const EXTRACURRICULARS_COLLECTION = 'extracurriculars';
+const LINKS_COLLECTION = 'links';
 
-export class Extracurricular {
+export class Link {
   static async getCollection() {
     const client = await clientPromise;
     const db = client.db('launchpad');
-    return db.collection(EXTRACURRICULARS_COLLECTION);
+    return db.collection(LINKS_COLLECTION);
   }
 
-  static async create({ name, date, description, thumbnail }) {
+  static async create({ userId, label, url, type, customType, notes }) {
     const collection = await this.getCollection();
     
-    const extracurricular = {
-      name,
-      date,
-      description,
-      thumbnail: thumbnail || null,
+    const link = {
+      userId,
+      label,
+      url,
+      type,
+      customType: type === 'Other' ? customType : null,
+      notes: notes || '',
       createdAt: new Date(),
       updatedAt: new Date()
     };
 
-    const result = await collection.insertOne(extracurricular);
-    return { ...extracurricular, _id: result.insertedId };
+    const result = await collection.insertOne(link);
+    return { ...link, _id: result.insertedId };
   }
 
-  static async findAll() {
+  static async findByUserId(userId) {
     const collection = await this.getCollection();
     return await collection
-      .find({})
+      .find({ userId })
       .sort({ createdAt: -1 })
-      .limit(100) // Limit results to prevent huge payloads
       .toArray();
   }
 
@@ -40,12 +41,12 @@ export class Extracurricular {
     return await collection.findOne({ _id: new ObjectId(id) });
   }
 
-  static async update(id, updates) {
+  static async update(id, userId, updates) {
     const collection = await this.getCollection();
     const { ObjectId } = require('mongodb');
     
     const result = await collection.findOneAndUpdate(
-      { _id: new ObjectId(id) },
+      { _id: new ObjectId(id), userId },
       { 
         $set: { 
           ...updates,
@@ -58,18 +59,14 @@ export class Extracurricular {
     return result;
   }
 
-  static async delete(id) {
+  static async delete(id, userId) {
     const collection = await this.getCollection();
     const { ObjectId } = require('mongodb');
     
-    const result = await collection.deleteOne({ _id: new ObjectId(id) });
+    const result = await collection.deleteOne({ 
+      _id: new ObjectId(id),
+      userId 
+    });
     return result.deletedCount > 0;
-  }
-
-  static async search(query) {
-    const collection = await this.getCollection();
-    return await collection.find({
-      name: { $regex: query, $options: 'i' }
-    }).toArray();
   }
 }

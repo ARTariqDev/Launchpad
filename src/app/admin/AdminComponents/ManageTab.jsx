@@ -39,6 +39,7 @@ export default function ManageTab({ type }) {
           description: item.description,
           location: item.location || { city: '', state: '', country: '' },
           thumbnail: item.thumbnail || null,
+          adminNotes: item.adminNotes || '',
         }));
         
         setItems(transformedItems);
@@ -77,6 +78,7 @@ export default function ManageTab({ type }) {
       if (type === "universities") {
         formData.append("deadlines", JSON.stringify(updatedItem.deadlines || []));
         formData.append("location", JSON.stringify(updatedItem.location || { city: '', state: '', country: '' }));
+        formData.append("adminNotes", updatedItem.adminNotes || '');
       } else if (type === "extracurriculars") {
         formData.append("date", updatedItem.deadline);
         formData.append("description", updatedItem.description);

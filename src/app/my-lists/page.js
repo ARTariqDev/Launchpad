@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Navbar from "../components/Navbar";
 import Toast from "../components/Toast";
 import CollegeInsightsModal from "../components/CollegeInsightsModal";
@@ -17,28 +18,152 @@ import {
   faEye,
   faChevronLeft,
   faChevronRight,
-  faCheck
+  faCheck,
+  faLink,
+  faExternalLinkAlt,
+  faPlus,
+  faEdit,
+  faCopy,
+  faSearch
 } from "@fortawesome/free-solid-svg-icons";
+
+// Component to render sensitive text with censoring
+const SensitiveText = ({ text }) => {
+  const [copiedId, setCopiedId] = useState(null);
+
+  const handleCopy = (textToCopy, id) => {
+    navigator.clipboard.writeText(textToCopy);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const parseText = (input) => {
+    const parts = [];
+    let lastIndex = 0;
+    const regex = /\*\*(.*?)\*\*/g;
+    let match;
+    let id = 0;
+
+    while ((match = regex.exec(input)) !== null) {
+      // Add text before the match
+      if (match.index > lastIndex) {
+        parts.push({
+          type: 'normal',
+          text: input.substring(lastIndex, match.index)
+        });
+      }
+
+      // Add sensitive text
+      parts.push({
+        type: 'sensitive',
+        text: match[1],
+        id: id++
+      });
+
+      lastIndex = regex.lastIndex;
+    }
+
+    // Add remaining text
+    if (lastIndex < input.length) {
+      parts.push({
+        type: 'normal',
+        text: input.substring(lastIndex)
+      });
+    }
+
+    return parts;
+  };
+
+  const parts = parseText(text);
+
+  return (
+    <span style={{ whiteSpace: "pre-wrap" }}>
+      {parts.map((part, index) => {
+        if (part.type === 'normal') {
+          return <span key={index}>{part.text}</span>;
+        } else {
+          return (
+            <span
+              key={index}
+              onClick={() => handleCopy(part.text, part.id)}
+              className="group relative inline-flex items-center cursor-pointer"
+              style={{
+                padding: "2px 6px",
+                borderRadius: "4px",
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                border: "1px solid rgba(255, 255, 255, 0.2)",
+                transition: "all 0.2s"
+              }}
+              title="Click to copy"
+            >
+              <span className="group-hover:hidden" style={{ color: "var(--text-secondary)" }}>
+                {'•'.repeat(Math.min(part.text.length, 8))}
+              </span>
+              <span className="hidden group-hover:inline" style={{ color: "var(--text-primary)" }}>
+                {part.text}
+              </span>
+              <FontAwesomeIcon 
+                icon={faCopy} 
+                className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ fontSize: "10px", color: "var(--text-subtle)" }}
+              />
+              {copiedId === part.id && (
+                <span 
+                  className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 rounded text-xs whitespace-nowrap"
+                  style={{ backgroundColor: "#10b981", color: "white" }}
+                >
+                  Copied!
+                </span>
+              )}
+            </span>
+          );
+        }
+      })}
+    </span>
+  );
+};
 
 export default function MyListsPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("calendar"); // colleges, scholarships, extracurriculars, calendar
+  const [activeTab, setActiveTab] = useState("calendar");
   const [toast, setToast] = useState(null);
+  const [tabLoading, setTabLoading] = useState(false);
 
   const [savedColleges, setSavedColleges] = useState([]);
   const [savedScholarships, setSavedScholarships] = useState([]);
   const [savedExtracurriculars, setSavedExtracurriculars] = useState([]);
+  const [savedLinks, setSavedLinks] = useState([]);
   
   const [completedColleges, setCompletedColleges] = useState([]);
   const [completedScholarships, setCompletedScholarships] = useState([]);
   const [completedExtracurriculars, setCompletedExtracurriculars] = useState([]);
+  
+  const [dataLoaded, setDataLoaded] = useState({
+    colleges: false,
+    scholarships: false,
+    extracurriculars: false,
+    links: false,
+    completed: false
+  });
 
   const [selectedCollege, setSelectedCollege] = useState(null);
   const [showCollegeInsights, setShowCollegeInsights] = useState(false);
   const [selectedScholarship, setSelectedScholarship] = useState(null);
   const [showScholarshipDetails, setShowScholarshipDetails] = useState(false);
+  
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [editingLink, setEditingLink] = useState(null);
+  const [linkFormData, setLinkFormData] = useState({
+    label: '',
+    url: '',
+    type: 'Applicant Portal',
+    customType: '',
+    notes: ''
+  });
+  const [linkSearchQuery, setLinkSearchQuery] = useState('');
+  const [linkTypeFilter, setLinkTypeFilter] = useState('All');
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [showActivityDetails, setShowActivityDetails] = useState(false);
 
@@ -66,34 +191,52 @@ export default function MyListsPage() {
 
   useEffect(() => {
     if (user) {
-      fetchAllData();
+      fetchCompletedItems().finally(() => setLoading(false));
+      loadTabData(activeTab);
     }
   }, [user]);
 
-  const fetchAllData = async () => {
+  const loadTabData = useCallback(async (tab) => {
+    if (!user) return;
+    
+    setTabLoading(true);
     try {
-      await Promise.all([
-        fetchSavedColleges(),
-        fetchSavedScholarships(),
-        fetchSavedExtracurriculars(),
-        fetchCompletedItems()
-      ]);
+      if (tab === "colleges" && !dataLoaded.colleges) {
+        await fetchSavedColleges();
+        setDataLoaded(prev => ({ ...prev, colleges: true }));
+      } else if (tab === "scholarships" && !dataLoaded.scholarships) {
+        await fetchSavedScholarships();
+        setDataLoaded(prev => ({ ...prev, scholarships: true }));
+      } else if (tab === "extracurriculars" && !dataLoaded.extracurriculars) {
+        await fetchSavedExtracurriculars();
+        setDataLoaded(prev => ({ ...prev, extracurriculars: true }));
+      } else if (tab === "links" && !dataLoaded.links) {
+        await fetchSavedLinks();
+        setDataLoaded(prev => ({ ...prev, links: true }));
+      } else if (tab === "calendar") {
+        const promises = [];
+        if (!dataLoaded.colleges) promises.push(fetchSavedColleges().then(() => setDataLoaded(prev => ({ ...prev, colleges: true }))));
+        if (!dataLoaded.scholarships) promises.push(fetchSavedScholarships().then(() => setDataLoaded(prev => ({ ...prev, scholarships: true }))));
+        if (!dataLoaded.extracurriculars) promises.push(fetchSavedExtracurriculars().then(() => setDataLoaded(prev => ({ ...prev, extracurriculars: true }))));
+        if (!dataLoaded.links) promises.push(fetchSavedLinks().then(() => setDataLoaded(prev => ({ ...prev, links: true }))));
+        await Promise.all(promises);
+      }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error loading tab data:", error);
     } finally {
-      setLoading(false);
+      setTabLoading(false);
     }
-  };
+  }, [user, dataLoaded]);
+
+  useEffect(() => {
+    loadTabData(activeTab);
+  }, [activeTab, loadTabData]);
 
   const fetchCompletedItems = async () => {
     try {
       const response = await fetch("/api/profile");
       const data = await response.json();
-      console.log("Fetched profile for completed items:", data);
       if (data.success && data.profile) {
-        console.log("Completed colleges:", data.profile.completedColleges || []);
-        console.log("Completed scholarships:", data.profile.completedScholarships || []);
-        console.log("Completed extracurriculars:", data.profile.completedExtracurriculars || []);
         setCompletedColleges(data.profile.completedColleges || []);
         setCompletedScholarships(data.profile.completedScholarships || []);
         setCompletedExtracurriculars(data.profile.completedExtracurriculars || []);
@@ -107,7 +250,6 @@ export default function MyListsPage() {
     try {
       const response = await fetch("/api/user-colleges");
       const data = await response.json();
-      console.log("Fetched colleges data:", data);
       if (data.success) {
         setSavedColleges(data.colleges || []);
       }
@@ -120,7 +262,6 @@ export default function MyListsPage() {
     try {
       const response = await fetch("/api/user-scholarships");
       const data = await response.json();
-      console.log("Fetched scholarships data:", data);
       if (data.success) {
         setSavedScholarships(data.scholarships || []);
       }
@@ -133,12 +274,23 @@ export default function MyListsPage() {
     try {
       const response = await fetch("/api/user-extracurriculars");
       const data = await response.json();
-      console.log("Fetched extracurriculars data:", data);
       if (data.success) {
         setSavedExtracurriculars(data.extracurriculars || []);
       }
     } catch (error) {
       console.error("Error fetching saved extracurriculars:", error);
+    }
+  };
+
+  const fetchSavedLinks = async () => {
+    try {
+      const response = await fetch("/api/links");
+      const data = await response.json();
+      if (data.success) {
+        setSavedLinks(data.links || []);
+      }
+    } catch (error) {
+      console.error("Error fetching saved links:", error);
     }
   };
 
@@ -199,8 +351,6 @@ export default function MyListsPage() {
   const handleMarkCollegeAsDone = async (college) => {
     try {
       const updatedCompleted = [...completedColleges, college];
-      console.log("Marking college as done:", college.name);
-      console.log("Updated completed colleges array:", updatedCompleted);
       const response = await fetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -209,9 +359,6 @@ export default function MyListsPage() {
           value: updatedCompleted
         })
       });
-
-      const result = await response.json();
-      console.log("PUT response:", result);
 
       if (response.ok) {
         setSavedColleges(savedColleges.filter(c => c._id !== college._id));
@@ -351,7 +498,116 @@ export default function MyListsPage() {
     }
   };
 
-  const getDaysInMonth = (date) => {
+  const handleOpenLinkModal = (link = null) => {
+    if (link) {
+      setEditingLink(link);
+      setLinkFormData({
+        label: link.label,
+        url: link.url,
+        type: link.type,
+        customType: link.customType || '',
+        notes: link.notes || ''
+      });
+    } else {
+      setEditingLink(null);
+      setLinkFormData({
+        label: '',
+        url: '',
+        type: 'Applicant Portal',
+        customType: '',
+        notes: ''
+      });
+    }
+    setShowLinkModal(true);
+  };
+
+  const handleCloseLinkModal = () => {
+    setShowLinkModal(false);
+    setEditingLink(null);
+    setLinkFormData({
+      label: '',
+      url: '',
+      type: 'Applicant Portal',
+      customType: '',
+      notes: ''
+    });
+  };
+
+  const handleSaveLink = async (e) => {
+    e.preventDefault();
+
+    try {
+      const payload = {
+        label: linkFormData.label,
+        url: linkFormData.url,
+        type: linkFormData.type,
+        customType: linkFormData.customType,
+        notes: linkFormData.notes
+      };
+
+      if (editingLink) {
+        payload.linkId = editingLink._id;
+        const response = await fetch("/api/links", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          await fetchSavedLinks();
+          handleCloseLinkModal();
+          setToast({ message: "Link updated successfully!", type: "success" });
+        } else {
+          const data = await response.json();
+          setToast({ message: data.error || "Failed to update link", type: "error" });
+        }
+      } else {
+        const response = await fetch("/api/links", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          await fetchSavedLinks();
+          handleCloseLinkModal();
+          setToast({ message: "Link added successfully!", type: "success" });
+        } else {
+          const data = await response.json();
+          setToast({ message: data.error || "Failed to add link", type: "error" });
+        }
+      }
+    } catch (error) {
+      console.error("Error saving link:", error);
+      setToast({ message: "Failed to save link", type: "error" });
+    }
+  };
+
+  const handleDeleteLink = async (linkId) => {
+    if (!confirm("Are you sure you want to delete this link?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/links", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ linkId })
+      });
+
+      if (response.ok) {
+        setSavedLinks(savedLinks.filter(l => l._id !== linkId));
+        setToast({ message: "Link deleted successfully!", type: "success" });
+      } else {
+        setToast({ message: "Failed to delete link", type: "error" });
+      }
+    } catch (error) {
+      console.error("Error deleting link:", error);
+      setToast({ message: "Failed to delete link", type: "error" });
+    }
+  };
+
+  const getDaysInMonth = useCallback((date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
     const firstDay = new Date(year, month, 1);
@@ -360,9 +616,9 @@ export default function MyListsPage() {
     const startingDayOfWeek = firstDay.getDay();
     
     return { daysInMonth, startingDayOfWeek };
-  };
+  }, []);
 
-  const getDeadlinesForDate = (date) => {
+  const getDeadlinesForDate = useCallback((date) => {
     const deadlines = [];
     const seenIds = new Set();
     const dateStr = date.toISOString().split('T')[0];
@@ -432,13 +688,11 @@ export default function MyListsPage() {
     });
 
     return deadlines;
-  };
+  }, [savedColleges, savedScholarships, savedExtracurriculars]);
 
-  const getAllDeadlines = () => {
+  const getAllDeadlines = useMemo(() => {
     const allDeadlines = [];
     const seenIds = new Set();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
     savedColleges.forEach(college => {
       if (college.deadlines && Array.isArray(college.deadlines)) {
@@ -496,29 +750,29 @@ export default function MyListsPage() {
     });
 
     return allDeadlines.sort((a, b) => a.date - b.date);
-  };
+  }, [savedColleges, savedScholarships, savedExtracurriculars]);
 
-  const getPassedDeadlines = () => {
+  const getPassedDeadlines = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return getAllDeadlines().filter(deadline => deadline.date < today);
-  };
+    return getAllDeadlines.filter(deadline => deadline.date < today);
+  }, [getAllDeadlines]);
 
-  const getUpcomingDeadlines = () => {
+  const getUpcomingDeadlines = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return getAllDeadlines().filter(deadline => deadline.date >= today);
-  };
+    return getAllDeadlines.filter(deadline => deadline.date >= today);
+  }, [getAllDeadlines]);
 
-  const previousMonth = () => {
+  const previousMonth = useCallback(() => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  };
+  }, [currentDate]);
 
-  const nextMonth = () => {
+  const nextMonth = useCallback(() => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-  };
+  }, [currentDate]);
 
-  const renderCalendar = () => {
+  const renderCalendar = useMemo(() => {
     const { daysInMonth, startingDayOfWeek } = getDaysInMonth(currentDate);
     const weeks = [];
     let days = [];
@@ -592,7 +846,7 @@ export default function MyListsPage() {
     }
 
     return weeks;
-  };
+  }, [currentDate, getDeadlinesForDate, getDaysInMonth]);
 
   if (loading) {
     return (
@@ -634,10 +888,11 @@ export default function MyListsPage() {
         {/* Tabs */}
         <div className="grid grid-cols-2 sm:flex gap-2 mb-8 animate-fade-in-delay-1">
           {[
+            { id: "calendar", label: "Calendar", shortLabel: "Calendar", icon: faCalendar },
             { id: "colleges", label: "Colleges", shortLabel: "Colleges", icon: faGraduationCap, count: savedColleges.length },
             { id: "scholarships", label: "Scholarships", shortLabel: "Scholar.", icon: faBook, count: savedScholarships.length },
             { id: "extracurriculars", label: "Activities", shortLabel: "Activities", icon: faTrophy, count: savedExtracurriculars.length },
-            { id: "calendar", label: "Calendar", shortLabel: "Calendar", icon: faCalendar }
+            { id: "links", label: "Links", shortLabel: "Links", icon: faLink, count: savedLinks.length }
           ].map(tab => (
             <button
               key={tab.id}
@@ -671,7 +926,13 @@ export default function MyListsPage() {
         {/* Colleges Tab */}
         {activeTab === "colleges" && (
           <div className="animate-fade-in-delay-2">
-            {savedColleges.length === 0 ? (
+            {tabLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-pulse" style={{ color: "var(--text-primary)" }}>
+                  Loading colleges...
+                </div>
+              </div>
+            ) : savedColleges.length === 0 ? (
               <div className="text-center py-12">
                 <FontAwesomeIcon
                   icon={faGraduationCap}
@@ -694,11 +955,16 @@ export default function MyListsPage() {
                     }}
                   >
                     {college.thumbnail && (
-                      <div className="w-full h-32 overflow-hidden bg-black/50">
-                        <img 
+                      <div className="w-full h-32 overflow-hidden bg-black/50 relative">
+                        <Image 
                           src={college.thumbnail} 
                           alt={college.name}
-                          className="w-full h-full object-cover"
+                          fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          className="object-cover"
+                          loading="lazy"
+                          placeholder="blur"
+                          blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzMzMzMzMyIvPjwvc3ZnPg=="
                         />
                       </div>
                     )}
@@ -765,7 +1031,13 @@ export default function MyListsPage() {
         {/* Scholarships Tab */}
         {activeTab === "scholarships" && (
           <div className="animate-fade-in-delay-2">
-            {savedScholarships.length === 0 ? (
+            {tabLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-pulse" style={{ color: "var(--text-primary)" }}>
+                  Loading scholarships...
+                </div>
+              </div>
+            ) : savedScholarships.length === 0 ? (
               <div className="text-center py-12">
                 <FontAwesomeIcon
                   icon={faBook}
@@ -788,11 +1060,16 @@ export default function MyListsPage() {
                     }}
                   >
                     {scholarship.thumbnail && (
-                      <div className="w-full h-32 overflow-hidden bg-black/50">
-                        <img 
+                      <div className="w-full h-32 overflow-hidden bg-black/50 relative">
+                        <Image 
                           src={scholarship.thumbnail} 
                           alt={scholarship.name}
-                          className="w-full h-full object-cover"
+                          fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          className="object-cover"
+                          loading="lazy"
+                          placeholder="blur"
+                          blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzMzMzMzMyIvPjwvc3ZnPg=="
                         />
                       </div>
                     )}
@@ -860,7 +1137,13 @@ export default function MyListsPage() {
         {/* Extracurriculars Tab */}
         {activeTab === "extracurriculars" && (
           <div className="animate-fade-in-delay-2">
-            {savedExtracurriculars.length === 0 ? (
+            {tabLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-pulse" style={{ color: "var(--text-primary)" }}>
+                  Loading activities...
+                </div>
+              </div>
+            ) : savedExtracurriculars.length === 0 ? (
               <div className="text-center py-12">
                 <FontAwesomeIcon
                   icon={faTrophy}
@@ -883,11 +1166,16 @@ export default function MyListsPage() {
                     }}
                   >
                     {activity.thumbnail && (
-                      <div className="w-full h-32 overflow-hidden bg-black/50">
-                        <img 
+                      <div className="w-full h-32 overflow-hidden bg-black/50 relative">
+                        <Image 
                           src={activity.thumbnail} 
                           alt={activity.name}
-                          className="w-full h-full object-cover"
+                          fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          className="object-cover"
+                          loading="lazy"
+                          placeholder="blur"
+                          blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzMzMzMzMyIvPjwvc3ZnPg=="
                         />
                       </div>
                     )}
@@ -952,6 +1240,214 @@ export default function MyListsPage() {
           </div>
         )}
 
+        {/* Links Tab */}
+        {activeTab === "links" && (
+          <div className="animate-fade-in-delay-2">
+            <div className="mb-4 flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <h2 
+                  className="font-bold text-xl"
+                  style={{ color: "var(--text-primary)", fontFamily: "var(--font-display)" }}
+                >
+                  My Links
+                </h2>
+                <button
+                  onClick={() => handleOpenLinkModal()}
+                  className="px-4 py-2 rounded-lg border-2 hover:bg-white/10 transition-all flex items-center gap-2 whitespace-nowrap"
+                  style={{
+                    borderColor: "var(--text-primary)",
+                    color: "var(--text-primary)"
+                  }}
+                >
+                  <FontAwesomeIcon icon={faPlus} className="w-4" />
+                  <span>Add Link</span>
+                </button>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 w-full">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder="Search links..."
+                    value={linkSearchQuery}
+                    onChange={(e) => setLinkSearchQuery(e.target.value)}
+                    className="w-full px-4 py-2 pl-10 rounded-lg border-2 bg-transparent focus:outline-none focus:border-white transition-colors text-sm"
+                    style={{
+                      borderColor: "rgba(255, 255, 255, 0.2)",
+                      color: "var(--text-primary)"
+                    }}
+                  />
+                  <FontAwesomeIcon
+                    icon={faSearch}
+                    className="absolute left-3 top-1/2 -translate-y-1/2"
+                    style={{ color: "var(--text-subtle)", fontSize: "14px" }}
+                  />
+                </div>
+                <select
+                  value={linkTypeFilter}
+                  onChange={(e) => setLinkTypeFilter(e.target.value)}
+                  className="px-4 py-2 rounded-lg border-2 bg-transparent focus:outline-none focus:border-white transition-colors cursor-pointer text-sm sm:w-64"
+                  style={{
+                    borderColor: "rgba(255, 255, 255, 0.2)",
+                    color: "var(--text-primary)",
+                    backgroundColor: "var(--primary-bg)"
+                  }}
+                >
+                  <option value="All" style={{ backgroundColor: "var(--primary-bg)" }}>All Types</option>
+                  <option value="Applicant Portal" style={{ backgroundColor: "var(--primary-bg)" }}>Applicant Portal</option>
+                  <option value="Financial Aid Portal" style={{ backgroundColor: "var(--primary-bg)" }}>Financial Aid Portal</option>
+                  <option value="Scholarship Portal" style={{ backgroundColor: "var(--primary-bg)" }}>Scholarship Portal</option>
+                  <option value="Student Portal" style={{ backgroundColor: "var(--primary-bg)" }}>Student Portal</option>
+                  <option value="Application Status" style={{ backgroundColor: "var(--primary-bg)" }}>Application Status</option>
+                  <option value="Document Upload" style={{ backgroundColor: "var(--primary-bg)" }}>Document Upload</option>
+                  <option value="Test Scores" style={{ backgroundColor: "var(--primary-bg)" }}>Test Scores</option>
+                  <option value="Housing Portal" style={{ backgroundColor: "var(--primary-bg)" }}>Housing Portal</option>
+                  <option value="Registration" style={{ backgroundColor: "var(--primary-bg)" }}>Registration</option>
+                  <option value="Other" style={{ backgroundColor: "var(--primary-bg)" }}>Other</option>
+                </select>
+              </div>
+            </div>
+
+            {tabLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-pulse" style={{ color: "var(--text-primary)" }}>
+                  Loading links...
+                </div>
+              </div>
+            ) : savedLinks.length === 0 ? (
+              <div className="text-center py-12">
+                <FontAwesomeIcon
+                  icon={faLink}
+                  className="w-16 h-16 mb-4 opacity-50"
+                  style={{ color: "var(--text-secondary)" }}
+                />
+                <p style={{ color: "var(--text-secondary)", fontSize: "18px" }}>
+                  No links saved yet
+                </p>
+                <p className="mt-2" style={{ color: "var(--text-subtle)", fontSize: "14px" }}>
+                  Add important links like applicant portals and financial aid pages
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {savedLinks
+                  .filter(link => {
+                    // Apply type filter
+                    if (linkTypeFilter !== 'All' && link.type !== linkTypeFilter) {
+                      return false;
+                    }
+                    // Apply search filter
+                    if (!linkSearchQuery) return true;
+                    const query = linkSearchQuery.toLowerCase();
+                    return (
+                      link.label.toLowerCase().includes(query) ||
+                      link.url.toLowerCase().includes(query) ||
+                      link.type.toLowerCase().includes(query) ||
+                      (link.customType && link.customType.toLowerCase().includes(query)) ||
+                      (link.notes && link.notes.toLowerCase().includes(query))
+                    );
+                  })
+                  .map((link) => (
+                  <div
+                    key={link._id}
+                    className="p-4 rounded-lg border-2 hover:border-white/40 transition-all"
+                    style={{
+                      backgroundColor: "var(--card-bg)",
+                      borderColor: "var(--card-border)"
+                    }}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 
+                          className="font-bold text-lg mb-1"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {link.label}
+                        </h3>
+                        <p 
+                          className="text-sm px-2 py-1 rounded inline-block mb-2"
+                          style={{ 
+                            backgroundColor: "rgba(255, 255, 255, 0.1)",
+                            color: "var(--text-secondary)" 
+                          }}
+                        >
+                          {link.type === 'Other' && link.customType ? link.customType : link.type}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="mb-3">
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm break-all hover:underline"
+                        style={{ color: "#60a5fa" }}
+                      >
+                        {link.url}
+                      </a>
+                    </div>
+
+                    {link.notes && link.notes.trim() !== '' && (
+                      <div
+                        className="mb-3 p-3 rounded text-sm"
+                        style={{ 
+                          backgroundColor: "rgba(255, 255, 255, 0.05)",
+                          borderLeft: "3px solid rgba(255, 255, 255, 0.2)"
+                        }}
+                      >
+                        <p className="font-semibold mb-1 text-xs" style={{ color: "var(--text-subtle)" }}>
+                          Notes:
+                        </p>
+                        <div style={{ color: "var(--text-secondary)" }}>
+                          <SensitiveText text={link.notes} />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 px-3 py-2 rounded-lg border-2 hover:bg-white/10 transition-all text-sm flex items-center justify-center gap-2"
+                        style={{
+                          borderColor: "var(--text-primary)",
+                          color: "var(--text-primary)"
+                        }}
+                      >
+                        <FontAwesomeIcon icon={faExternalLinkAlt} className="w-4" />
+                        Open Link
+                      </a>
+                      <button
+                        onClick={() => handleOpenLinkModal(link)}
+                        className="px-3 py-2 rounded-lg border-2 hover:bg-white/10 transition-all text-sm"
+                        style={{
+                          borderColor: "rgba(255, 255, 255, 0.3)",
+                          color: "var(--text-primary)"
+                        }}
+                        title="Edit"
+                      >
+                        <FontAwesomeIcon icon={faEdit} className="w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteLink(link._id)}
+                        className="px-3 py-2 rounded-lg border-2 hover:bg-red-500/20 transition-all text-sm"
+                        style={{
+                          borderColor: "#ef4444",
+                          color: "#ef4444"
+                        }}
+                        title="Delete"
+                      >
+                        <FontAwesomeIcon icon={faTrash} className="w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Calendar Tab */}
         {activeTab === "calendar" && (
           <div className="space-y-6 animate-fade-in-delay-2">
@@ -963,7 +1459,7 @@ export default function MyListsPage() {
               >
                 Upcoming Deadlines
               </h2>
-              {getUpcomingDeadlines().length === 0 ? (
+              {getUpcomingDeadlines.length === 0 ? (
                 <div 
                   className="border-2 rounded-lg p-6 text-center"
                   style={{
@@ -975,7 +1471,7 @@ export default function MyListsPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {getUpcomingDeadlines().map((deadline) => (
+                  {getUpcomingDeadlines.map((deadline) => (
                     <div
                       key={deadline.id}
                       className="border-2 rounded-lg p-4 flex items-center justify-between hover:border-white/40 transition-all"
@@ -1030,7 +1526,7 @@ export default function MyListsPage() {
               >
                 Passed Deadlines
               </h2>
-              {getPassedDeadlines().length === 0 ? (
+              {getPassedDeadlines.length === 0 ? (
                 <div 
                   className="border-2 rounded-lg p-6 text-center"
                   style={{
@@ -1042,7 +1538,7 @@ export default function MyListsPage() {
                 </div>
               ) : (
                 <div className="space-y-2 opacity-60">
-                  {getPassedDeadlines().reverse().slice(0, 10).map((deadline) => (
+                  {getPassedDeadlines.slice().reverse().slice(0, 10).map((deadline) => (
                     <div
                       key={deadline.id}
                       className="border-2 rounded-lg p-4 flex items-center justify-between"
@@ -1270,7 +1766,7 @@ export default function MyListsPage() {
                 </div>
 
                 {/* Calendar grid */}
-                {renderCalendar()}
+                {renderCalendar}
               </div>
 
               {/* Legend */}
@@ -1322,6 +1818,189 @@ export default function MyListsPage() {
             setSelectedActivity(null);
           }}
         />
+      )}
+
+      {/* Link Modal */}
+      {showLinkModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}
+          onClick={handleCloseLinkModal}
+        >
+          <div
+            className="w-full max-w-2xl rounded-xl border-2 p-6"
+            style={{
+              backgroundColor: "var(--primary-bg)",
+              borderColor: "rgba(255, 255, 255, 0.2)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2
+              className="font-bold text-2xl mb-6"
+              style={{ color: "var(--text-primary)", fontFamily: "var(--font-display)" }}
+            >
+              {editingLink ? 'Edit Link' : 'Add New Link'}
+            </h2>
+
+            <form onSubmit={handleSaveLink} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="label"
+                  className="block mb-2 font-semibold"
+                  style={{ color: "var(--text-primary)", fontSize: "14px" }}
+                >
+                  Label / Name *
+                </label>
+                <input
+                  type="text"
+                  id="label"
+                  value={linkFormData.label}
+                  onChange={(e) => setLinkFormData({ ...linkFormData, label: e.target.value })}
+                  required
+                  placeholder="e.g., Harvard Applicant Portal"
+                  className="w-full px-4 py-3 rounded-lg border-2 bg-transparent focus:outline-none focus:border-white transition-colors"
+                  style={{
+                    borderColor: "rgba(255, 255, 255, 0.2)",
+                    color: "var(--text-primary)"
+                  }}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="url"
+                  className="block mb-2 font-semibold"
+                  style={{ color: "var(--text-primary)", fontSize: "14px" }}
+                >
+                  URL *
+                </label>
+                <input
+                  type="url"
+                  id="url"
+                  value={linkFormData.url}
+                  onChange={(e) => setLinkFormData({ ...linkFormData, url: e.target.value })}
+                  required
+                  placeholder="https://example.com"
+                  className="w-full px-4 py-3 rounded-lg border-2 bg-transparent focus:outline-none focus:border-white transition-colors"
+                  style={{
+                    borderColor: "rgba(255, 255, 255, 0.2)",
+                    color: "var(--text-primary)"
+                  }}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="type"
+                  className="block mb-2 font-semibold"
+                  style={{ color: "var(--text-primary)", fontSize: "14px" }}
+                >
+                  Type *
+                </label>
+                <select
+                  id="type"
+                  value={linkFormData.type}
+                  onChange={(e) => setLinkFormData({ ...linkFormData, type: e.target.value })}
+                  required
+                  className="w-full px-4 py-3 rounded-lg border-2 bg-transparent focus:outline-none focus:border-white transition-colors cursor-pointer"
+                  style={{
+                    borderColor: "rgba(255, 255, 255, 0.2)",
+                    color: "var(--text-primary)",
+                    backgroundColor: "var(--primary-bg)"
+                  }}
+                >
+                  <option value="Applicant Portal" style={{ backgroundColor: "var(--primary-bg)" }}>Applicant Portal</option>
+                  <option value="Financial Aid Portal" style={{ backgroundColor: "var(--primary-bg)" }}>Financial Aid Portal</option>
+                  <option value="Scholarship Portal" style={{ backgroundColor: "var(--primary-bg)" }}>Scholarship Portal</option>
+                  <option value="Student Portal" style={{ backgroundColor: "var(--primary-bg)" }}>Student Portal</option>
+                  <option value="Application Status" style={{ backgroundColor: "var(--primary-bg)" }}>Application Status</option>
+                  <option value="Document Upload" style={{ backgroundColor: "var(--primary-bg)" }}>Document Upload</option>
+                  <option value="Test Scores" style={{ backgroundColor: "var(--primary-bg)" }}>Test Scores</option>
+                  <option value="Housing Portal" style={{ backgroundColor: "var(--primary-bg)" }}>Housing Portal</option>
+                  <option value="Registration" style={{ backgroundColor: "var(--primary-bg)" }}>Registration</option>
+                  <option value="Other" style={{ backgroundColor: "var(--primary-bg)" }}>Other</option>
+                </select>
+              </div>
+
+              {linkFormData.type === 'Other' && (
+                <div>
+                  <label
+                    htmlFor="customType"
+                    className="block mb-2 font-semibold"
+                    style={{ color: "var(--text-primary)", fontSize: "14px" }}
+                  >
+                    Custom Type *
+                  </label>
+                  <input
+                    type="text"
+                    id="customType"
+                    value={linkFormData.customType}
+                    onChange={(e) => setLinkFormData({ ...linkFormData, customType: e.target.value })}
+                    required
+                    placeholder="Enter custom type"
+                    className="w-full px-4 py-3 rounded-lg border-2 bg-transparent focus:outline-none focus:border-white transition-colors"
+                    style={{
+                      borderColor: "rgba(255, 255, 255, 0.2)",
+                      color: "var(--text-primary)"
+                    }}
+                  />
+                </div>
+              )}
+
+              <div>
+                <label
+                  htmlFor="notes"
+                  className="block mb-2 font-semibold"
+                  style={{ color: "var(--text-primary)", fontSize: "14px" }}
+                >
+                  Notes
+                </label>
+                <p className="mb-2 text-xs" style={{ color: "var(--text-subtle)" }}>
+                  Add any related information (e.g., username, password, important details).
+                  Wrap sensitive text in **asterisks** to censor it (e.g., Password: **mypass123**).
+                  Hover to reveal, click to copy.
+                </p>
+                <textarea
+                  id="notes"
+                  value={linkFormData.notes}
+                  onChange={(e) => setLinkFormData({ ...linkFormData, notes: e.target.value })}
+                  rows="4"
+                  placeholder="Enter notes..."
+                  className="w-full px-4 py-3 rounded-lg border-2 bg-transparent focus:outline-none focus:border-white transition-colors resize-y"
+                  style={{
+                    borderColor: "rgba(255, 255, 255, 0.2)",
+                    color: "var(--text-primary)"
+                  }}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 px-6 py-3 rounded-lg border-2 hover:bg-white hover:text-black transition-all font-semibold"
+                  style={{
+                    borderColor: "var(--text-primary)",
+                    color: "var(--text-primary)",
+                    backgroundColor: "transparent"
+                  }}
+                >
+                  {editingLink ? 'Update Link' : 'Add Link'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCloseLinkModal}
+                  className="flex-1 px-6 py-3 rounded-lg border-2 hover:bg-white/10 transition-all font-semibold"
+                  style={{
+                    borderColor: "rgba(255, 255, 255, 0.3)",
+                    color: "var(--text-primary)"
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {toast && (

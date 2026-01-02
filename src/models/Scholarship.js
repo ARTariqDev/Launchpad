@@ -27,7 +27,11 @@ export class Scholarship {
 
   static async findAll() {
     const collection = await this.getCollection();
-    return await collection.find({}).sort({ createdAt: -1 }).toArray();
+    return await collection
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(100) // Limit results to prevent huge payloads
+      .toArray();
   }
 
   static async findById(id) {

@@ -41,7 +41,7 @@ export default function Footer() {
             </span>
             <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
               <a
-                href="https://github.com/ARTariqDev"
+                href="https://github.com/devplotlib"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
@@ -50,7 +50,7 @@ export default function Footer() {
                   fontSize: "14px",
                 }}
               >
-                Abdur Rehman Tariq
+                Muhammad Abubakar
                 <FontAwesomeIcon
                   icon={faGithub}
                   className="w-4 h-4"
@@ -70,6 +70,25 @@ export default function Footer() {
                 }}
               >
                 Abdul Wasiq Khan
+                <FontAwesomeIcon
+                  icon={faGithub}
+                  className="w-4 h-4"
+                />
+              </a>
+              <span style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
+                &
+              </span>
+              <a
+                href="https://github.com/ARTariqDev"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+                style={{
+                  color: "var(--text-primary)",
+                  fontSize: "14px",
+                }}
+              >
+                Abdur Rehman Tariq
                 <FontAwesomeIcon
                   icon={faGithub}
                   className="w-4 h-4"
