@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { University } from "@/models/University";
+import clientPromise from "@/lib/mongodb";
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   try {
+    // Ensure database connection
+    await clientPromise;
+    
     const session = await getSession();
 
     if (!session) {

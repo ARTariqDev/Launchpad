@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { UserProfile } from "@/models/UserProfile";
+import clientPromise from "@/lib/mongodb";
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
   try {
+    // Ensure database connection
+    await clientPromise;
+    
     const session = await getSession();
 
     if (!session) {
@@ -22,13 +29,14 @@ export async function POST(request) {
       );
     }
 
-    const profile = await UserProfile.findByUserId(session.userId);
+    let profile = await UserProfile.findByUserId(session.userId);
 
+    // If profile doesn't exist, create it
     if (!profile) {
-      return NextResponse.json(
-        { error: "Profile not found" },
-        { status: 404 }
-      );
+      await UserProfile.createOrUpdate(session.userId, {
+        savedColleges: []
+      });
+      profile = await UserProfile.findByUserId(session.userId);
     }
 
     const savedColleges = profile.savedColleges || [];
@@ -59,6 +67,9 @@ export async function POST(request) {
 
 export async function GET(request) {
   try {
+    // Ensure database connection
+    await clientPromise;
+    
     const session = await getSession();
 
     if (!session) {
@@ -103,6 +114,9 @@ export async function GET(request) {
 
 export async function DELETE(request) {
   try {
+    // Ensure database connection
+    await clientPromise;
+    
     const session = await getSession();
 
     if (!session) {
@@ -121,13 +135,14 @@ export async function DELETE(request) {
       );
     }
 
-    const profile = await UserProfile.findByUserId(session.userId);
+    let profile = await UserProfile.findByUserId(session.userId);
 
+    // If profile doesn't exist, nothing to delete
     if (!profile) {
-      return NextResponse.json(
-        { error: "Profile not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({
+        success: true,
+        message: "College not in your list"
+      });
     }
 
     const savedColleges = (profile.savedColleges || []).filter(
